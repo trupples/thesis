@@ -32,7 +32,7 @@
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=384b581d" />
     <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
   
@@ -60,7 +60,7 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'log';</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Welcome to my thesis project" href="welcome.html" />
+    <link rel="prev" title="Metagaming" href="metagaming.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -169,9 +169,14 @@
                 </a>
             </li>
         </ul>
-        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Notes</span></p>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Thesis</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="strategy.html">Strategy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="metagaming.html">Metagaming</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Log</a></li>
 </ul>
 
     </div>
@@ -367,7 +372,17 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2023-10-04</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2023-08-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2023-08-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2023-08-08</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">2023-08-09</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">2023-08-10</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">2023-10-04</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">2023-10-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">2023-10-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">2024-01-15</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">2024-03-01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">2024-03-10</a></li>
 </ul>
             </nav>
         </div>
@@ -381,8 +396,43 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="log">
 <h1>Log<a class="headerlink" href="#log" title="Link to this heading">#</a></h1>
+<p>The first like 6 months are very disorderly, with a lot of Romanian, these were just personal notes meant mostly to save interesting links. Please don’t mind :)</p>
 <section id="id1">
-<h2>2023-10-04<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<h2>2023-08-??<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.analog.com/media/en/technical-documentation/data-sheets/AD8420.pdf">AD8420 in-amp</a></p>
+<p>si om mai vedea dupa.</p>
+</section>
+<section id="id2">
+<h2>2023-08-??<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<p>Given cum se degradeaza performantele la gain mare (as fi vrut initial 1000), cred ca ar fi mai sanatos un two-stage design. Prima data in-amp sa faca un 50-100x (mai spre 100 imo), dupa o filtrare cu pasive, dupa inca un amplificator sau direct ADC</p>
+<p>la multiplexed ADC, factori de considerat:</p>
+<ul class="simple">
+<li><p>pret</p></li>
+<li><p>sample rate (as vrea MACAR 1khz * num_channels)</p></li>
+<li><p>multiplex rate (iar, same) de ex din cauza asta cam pica LTC2444. Pe ideea asta, sunt nice alea cu channel sequencer, ca is facute sa citesti tot pe rand ciclic</p></li>
+</ul>
+<p>caracatica cu 8 sloturi cu cate un ADC cu 8 canale each. Plus prefab 8 sensor modules, fie ca sunt grids, benzi, freeform, etc.</p>
+<p>de citit cartea lui Tassos ca sa aleg intre single ended sau differential. Probabil raman la single ended lul</p>
+</section>
+<section id="id3">
+<h2>2023-08-08<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.analog.com/en/ad8293g160">AD8293G160</a> e mega ieftin daca tot vreau sa fac un stage de gain mai cu bun simt la inceput, why not use this + bag si 2nd order low pass (datasheet, fig 19). Nu o sa am pasive degeaba :) Si dupa pe board-ul principal daca mai trebuie amp.</p>
+<p>nu merita la pret sa iei mai multe amplificatoare in acelasi integrat</p>
+</section>
+<section id="id4">
+<h2>2023-08-09<a class="headerlink" href="#id4" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.analog.com/media/en/technical-documentation/technical-articles/ECG-EEG-EMG_FINAL.pdf">https://www.analog.com/media/en/technical-documentation/technical-articles/ECG-EEG-EMG_FINAL.pdf</a></p>
+<p>Neato microcontroller <a class="reference external" href="https://www.analog.com/en/products/adsp-bf592.html">https://www.analog.com/en/products/adsp-bf592.html</a> though apparently quite old</p>
+</section>
+<section id="id5">
+<h2>2023-08-10<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.nature.com/articles/s41467-021-25152-y">https://www.nature.com/articles/s41467-021-25152-y</a>
+<a class="reference external" href="https://www.nature.com/articles/s41467-020-18503-8">https://www.nature.com/articles/s41467-020-18503-8</a>
+PEDOT:PSS</p>
+<p>da’ cred ca o sa fac cu ceva relief de cupru electroplated cu argint si dupa maaaaaaaybe oxidat in clor da’ nu ma incumat asa departe</p>
+</section>
+<section id="id6">
+<h2>2023-10-04<a class="headerlink" href="#id6" title="Link to this heading">#</a></h2>
 <p>First meet with Tassos</p>
 <p>Parts:</p>
 <ul class="contains-task-list simple">
@@ -392,8 +442,55 @@ document.write(`
 <li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> #TODO written agreement from ADI for NDA messiness</p></li>
 </ul>
 <p>look up: muscle contraction sliding filament mechanism, sarcomere</p>
-<hr class="docutils" />
-<p>TODO TRANSCRIBE AUTUMN &amp; WINTER NOTES HERE!</p>
+</section>
+<section id="id7">
+<h2>2023-10-??<a class="headerlink" href="#id7" title="Link to this heading">#</a></h2>
+<p>FIRMWARE STUFF:
+<a class="github reference external" href="https://github.com/analogdevicesinc/libtinyiiod/">analogdevicesinc/libtinyiiod</a>
+Put this on the microcontroller so that we may connect to it via iio serial!
+TODO Test transfer rate (want thicc 16bits/sample * 32 channels * 2ksps = 128kbytes/s = 1.024Mbaud. Seems doable even with arduino uno (though I don’t think it can send and process at the time, that might kill it, but more powerful uno-form-factor boards will be more than good enough)</p>
+<p>“sinc” filter removes all multiples of X Hz -&gt; mains hum :)</p>
+</section>
+<section id="id8">
+<h2>2023-10-??<a class="headerlink" href="#id8" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://www.frontiersin.org/articles/10.3389/felec.2021.700363/full">https://www.frontiersin.org/articles/10.3389/felec.2021.700363/full</a></p>
+<p>make my own electrodes?????
+buy silver snap-on jewlery, then either bleach or electroplate it</p>
+<p><a class="reference external" href="https://ieeexplore.ieee.org/document/4121504">https://ieeexplore.ieee.org/document/4121504</a></p>
+<p>driven right leg</p>
+</section>
+<section id="id9">
+<h2>2024-01-15<a class="headerlink" href="#id9" title="Link to this heading">#</a></h2>
+<p><a class="reference external" href="https://stacks.stanford.edu/file/druid:nq977kw3386/aspen-platform-tools-iv_plus_title-augmented.pdf">https://stacks.stanford.edu/file/druid:nq977kw3386/aspen-platform-tools-iv_plus_title-augmented.pdf</a></p>
+<p>![[assets/Pasted image 20240115170251.png]] i like this!</p>
+<p>also, in recent days I have started questioning whether I should go for:</p>
+<ol class="arabic simple">
+<li><p>local amplifier + many wires (V+, V-, Vref, signal) back to main board (initial idea)</p></li>
+<li><p><em>shielded</em> single ended probe amplified on the main board</p></li>
+</ol>
+<p>pros of second would be compatibility with already existing hardware, connectors, etc (snap connectors are single ended)</p>
+<p>variant 1 ideas - considering shielded TRRS cables -&gt; flexible, cheap, shielded variants exist. cons: non-standard for EMG</p>
+</section>
+<section id="id10">
+<h2>2024-03-01<a class="headerlink" href="#id10" title="Link to this heading">#</a></h2>
+<p>could a ribbon connector be configured in such a way so that if it’s mounted one way, we have single-ended amps, but otherwise we have differential neighbourin amps</p>
+<p>idk but it’s likely much easier to have a switch on each electrode (if active electrodes)</p>
+<p>differential (with RLD) might just be overall superior. single-ended measurements can be approximated by cumulative sums, and with differential there are less amplification challenges.</p>
+</section>
+<section id="id11">
+<h2>2024-03-10<a class="headerlink" href="#id11" title="Link to this heading">#</a></h2>
+<p>“Previous art” initial research (ddg):</p>
+<p><a class="reference external" href="https://doi.org/10.3389%2Ffnbot.2022.886050">ROS-Neuro: An Open-Source Platform for Neurorobotics</a> - if this proves to be a de-facto standard, I should use its messages and structure. This project would neatly fall into the <code class="docutils literal notranslate"><span class="pre">rosneuro_acquisition</span></code> category. This would also allow for easier testing with other pre-built components.</p>
+<p><a class="reference external" href="https://doi.org/10.3390/robotics7030036">Development of an EMG-Controlled Mobile Robot</a> - uses ROS and a <a class="reference external" href="https://wearabletech.io/myo-bracelet/">Thalmic Myo Armband (200usd)</a></p>
+<p><a class="reference external" href="https://answers.ros.org/question/306234/looking-for-existing-electromyograph-emgeeg-or-voltage-messages/">Q&amp;A “Looking for existing Electromyograph EMG/EEG, or voltage messages”</a> highlights the need for a common framework (-&gt; rosneuro?)</p>
+<p><a class="reference external" href="https://www.mdpi.com/2218-6581/12/4/95">A Newly-Designed Wearable Robotic Hand Exoskeleton Controlled by EMG Signals and ROS Embedded Systems</a> which seems to have <a class="reference external" href="https://www.mdpi.com/2218-6581/13/2/21">plagarized</a> <a class="reference external" href="https://doi.org/10.1016/j.bspc.2019.101834">EMG-driven hand model based on the classification of individual finger movements</a></p>
+<p><a class="reference external" href="https://www.sciencedirect.com/science/article/pii/S2405896321016761">Development of an EMG based SVM supported control solution for the PlatypOUs education mobile robot using MindRove headset</a> - TODO Check out</p>
+<p><a class="reference external" href="https://ieeexplore.ieee.org/document/7353997">A flexible architecture to enhance wearable robots: Integration of EMG-informed models</a> uses ROS.</p>
+<p><a class="reference external" href="https://doi.org/10.14372/IEMEK.2020.15.2.87">Teleoperation Control of ROS-based Industrial Robot using EMG Signals</a></p>
+<p><a class="github reference external" href="https://github.com/uts-magic-lab/ros_myo">uts-magic-lab/ros_myo</a>
+<a class="github reference external" href="https://github.com/dzhu/myo-raw">dzhu/myo-raw</a>
+<a class="github reference external" href="https://github.com/ruoshiwen/ros_gforce/">ruoshiwen/ros_gforce</a></p>
+<p>Also collected all pre-2024-03 log entries from the 2 obsidians and put them here.</p>
 </section>
 </section>
 
@@ -428,12 +525,12 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="welcome.html"
+       href="metagaming.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Welcome to my thesis project</p>
+        <p class="prev-next-title">Metagaming</p>
       </div>
     </a>
 </div>
@@ -452,7 +549,17 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2023-10-04</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2023-08-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2023-08-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2023-08-08</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">2023-08-09</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">2023-08-10</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">2023-10-04</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">2023-10-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">2023-10-??</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">2024-01-15</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">2024-03-01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">2024-03-10</a></li>
 </ul>
   </nav></div>
 
