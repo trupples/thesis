@@ -4,11 +4,11 @@
 format: jb-book
 root: welcome
 parts:
+  - caption: Thesis
+    chapters:
+      - file: introduction.md
   - caption: Notes
     chapters:
       - file: concept.md
-      #- file: strategy.md
+      - file: metagaming.md
       - file: log.md
-
-      #  - caption: Thesis
-      #- caption: Log
