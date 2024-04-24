@@ -4,6 +4,10 @@
 
   (paper "A4")
 
+  (title_block
+    (title "15 Channel EMG feather wing")
+  )
+
   (lib_symbols
     (symbol "AD7124-8:AD7124-8BBCPZ-RL7" (in_bom yes) (on_board yes)
       (property "Reference" "IC" (at 72.39 22.86 0)
@@ -773,9 +777,6 @@
   (junction (at 271.78 62.23) (diameter 0) (color 0 0 0 0)
     (uuid b6f26716-2816-4ddf-90f9-105e4cf695e6)
   )
-  (junction (at 165.1 100.33) (diameter 0) (color 0 0 0 0)
-    (uuid c8c37e8c-5b12-47f4-9b03-7abc27c053a9)
-  )
   (junction (at 167.64 97.79) (diameter 0) (color 0 0 0 0)
     (uuid d252d337-e821-4fa7-8afe-00bbeb0e29e4)
   )
@@ -1080,10 +1081,6 @@
     (stroke (width 0) (type default))
     (uuid 88bdf449-744f-4354-a8a2-af2b8db80083)
   )
-  (wire (pts (xy 165.1 110.49) (xy 165.1 100.33))
-    (stroke (width 0) (type default))
-    (uuid 88dd7dec-b968-4606-a21b-3fe0232efbda)
-  )
   (wire (pts (xy 158.75 67.31) (xy 167.64 67.31))
     (stroke (width 0) (type default))
     (uuid 8942a66e-bbdd-4b47-88b5-66bad5edcfe6)
@@ -1349,7 +1346,7 @@
     (uuid fb0590bb-0c10-4e7f-97fc-687e386ef935)
   )
 
-  (rectangle (start 176.53 15.24) (end 281.94 120.65)
+  (rectangle (start 176.53 15.24) (end 281.94 139.7)
     (stroke (width 0) (type default))
     (fill (type none))
     (uuid 189b9980-de18-4106-ac3d-5f6e1fdefc67)
@@ -1375,14 +1372,21 @@
     (uuid a3cb9ca1-e8f8-424d-aa8d-b19d209ff7ab)
   )
 
-  (text_box "Although the MAX78000FTHR boasts compatibility with AdaFruit Feather boards, it is not fully spec-compliant. The form factor is right and the power / SPI / I2C buses seem to be in the same places, which helps a bit. For this reason, I made a custom symbol & footprint."
+  (text_box "Voltages on the skin are around 10 - 1000 uV (if electrodes placed properly), and may, in extreme cases, rise to 10 mV, give or take (not considering ESD). The active electrode boards have a gain of 160, bringing the nominal interval to 1.6 - 160 mV around the AVDD/2 bias (extreme case, VDD/2 +- 1.6 V). The internal PGAs may be used to add up to another 128x gain, if AIN15 is properly set to AVDD/2 (so the PGAs don't saturate). Otherwise, I'm using a very basic configuration for the ADC pins. The electrode order is chosen to facilitate routing."
+    (at 179.07 121.92 0) (size 100.33 15.24)
+    (stroke (width 0) (type default))
+    (fill (type none))
+    (effects (font (size 1.27 1.27)) (justify left top))
+    (uuid 098ca346-9545-4bc0-b5f4-80ded309aff5)
+  )
+  (text_box "Although the MAX78000FTHR boasts compatibility with AdaFruit Feather boards, it is not fully spec-compliant. The form factor is right and the power / SPI / I2C buses seem to be in the same places, which helps a bit. Yet I still made a custom symbol & footprint."
     (at 17.78 74.93 0) (size 53.34 13.97)
     (stroke (width 0) (type default))
     (fill (type none))
     (effects (font (size 1.27 1.27)) (justify left top))
     (uuid 550a3f99-d092-4296-b0ca-a0bebaa21495)
   )
-  (text_box "V_{SYS} = 3.7 ... 4.2 / 5 V (LiPo battery low ... high / USB)\nR4 = 33.3k for 3.3V output\nAll caps are the datasheet recommended values.\nAlthough the PG pin is not used, PGFB is configured for a 10% error\n\n## Analog side current limit\n\nEach amplifier board should need at most 1.5mA; The DAC's consumption of a handful of microamps should be negligible.\n\nFor some baseline safety in case of very unfortunate shortcircuits (realistically speaking, this should never happen) that would endanger the user, I'm limiting the analog-side current to 16 * 1.5mA + 1mA = 25mA, corresponding to R1 = 5 kohm. Of course, knowing the resistance of the human body, 3.3V should under no circumstances lead to such high current, and we have no inductors that could cause a current spike, but better slighly safe than sorry. We aren't winning any safety contests with this whole design anyway.\n"
+  (text_box "V_{SYS} = 3.7 ... 4.2 / 5 V (LiPo battery low ... high / USB)\nR4 = 33.3k for 3.3V output\nAll caps are the datasheet recommended values.\nAlthough the PG pin is not used, PGFB is configured for a 10% error\n\n## Analog side current limit\n\nEach amplifier board should need at most 1.5mA; The DAC's consumption of a handful of microamps should be negligible.\n\nFor some baseline safety in case of very unfortunate shortcircuits that would endanger the user (which, realistically speaking, should never happen), I'm limiting the analog-side current to 16 * 1.5mA + 1mA = 25mA, corresponding to R1 = 5 kohm. Of course, knowing the resistance of the human body, 3.3V should under no circumstances lead to such high current, and we have no inductors that could cause a current spike, but better slighly safe than sorry. We aren't winning any safety contests with this whole design anyway.\n"
     (at 17.78 139.7 0) (size 82.55 38.1)
     (stroke (width 0) (type default))
     (fill (type none))
