@@ -1,5 +1,4 @@
 (fp_lib_table
   (version 7)
   (lib (name "myo-hub")(type "KiCad")(uri "${KIPRJMOD}/../lib/footprints.pretty")(options "")(descr ""))
-  (lib (name "Library")(type "KiCad")(uri "C:/Users/idragomi/Desktop/thesis/hardware/lib/footprints.pretty/Library.pretty")(options "")(descr ""))
 )
