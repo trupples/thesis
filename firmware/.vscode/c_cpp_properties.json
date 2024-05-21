@@ -1,0 +1,48 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/CMSIS/Device/Maxim/MAX78000/Include/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/CMSIS/Include/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Include/MAX78000/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/ADC/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/AES/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/CAMERAIF/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/CRC/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/DMA/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/FLC/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/GPIO/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/I2C/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/I2S/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/ICC/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/LPCMP/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/OWM/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/PT/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/RTC/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/SEMA/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/SPI/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/TMR/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/TRNG/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/UART/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/WDT/",
+                "${workspaceFolder}/build/app/MaximSDK/Libraries/PeriphDrivers/Source/WUT/",
+                "${workspaceFolder}/lib/no-OS/drivers/adc/ad7124",
+                "${workspaceFolder}/lib/no-OS/drivers/platform/maxim/max78000",
+                "${workspaceFolder}/lib/no-OS/drivers/platform/maxim/common",
+                "${workspaceFolder}/lib/no-OS/iio",
+                "${workspaceFolder}/lib/no-OS/iio/iio_app",
+                "${workspaceFolder}/lib/no-OS/include",
+                "${workspaceFolder}/src"
+            ],
+            "defines": [
+                "DISABLE_SECURE_SOCKET", "IIO_SUPPORT", "MAXIM_PLATFORM", "NO_OS_PROJECT=firmware", "NO_OS_VERSION=main-095e84f-modified", "TARGET=max78000", "TARGET_NUM=78000", "TARGET_REV=0x4131"
+            ],
+            "compilerPath": "${env:MAXIM_PATH}/Tools/GNUTools/10.3/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "intelliSenseMode": "linux-gcc-arm"
+        }
+    ],
+    "version": 4
+}

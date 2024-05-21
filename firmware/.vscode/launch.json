@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/firmware.elf",
+            "name": "OpenOCD(stlink-dap)",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "preLaunchTask": "Build",
+            "svdFile": "${env:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
+            "configFiles": [
+                "${workspaceFolder}/build/firmware.elf.openocd"
+            ],
+            "searchDir": [ "${env:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none"
+        },
+        {
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/firmware.elf",
+            "name": "OpenOCD(CMSIS-dap)",
+            "request": "launch",
+            "type": "cortex-debug",
+            "device": "cmsis-dap",
+            "servertype": "openocd",
+            "preLaunchTask": "Build",
+            "svdFile": "${env:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
+            "configFiles": [
+                "interface/cmsis-dap.cfg","target/MAX78000.cfg"
+            ],
+            "searchDir": [ "${env:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none"
+        }
+    ]
+}

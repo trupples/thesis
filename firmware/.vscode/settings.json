@@ -1,0 +1,7 @@
+{
+    "cortex-debug.gdbPath": "${env:MAXIM_PATH}/Tools/GNUTools/10.3/bin/arm-none-eabi-gdb",
+    "cortex-debug.openocdPath": "${env:MAXIM_PATH}/Libraries/../Tools/OpenOCD/openocd",
+    
+    "cmake.configureOnOpen": false,
+    "MAXIM_PATH": "/MaximSDK",
+}
