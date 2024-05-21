@@ -1,46 +1,3 @@
-/***************************************************************************//**
- *   @file   ad7124-8pmdz/src/main.c
- *   @brief  Implementation of Main Function.
- *   @author Drimbarean Andrei (andrei.drimbarean@analog.com)
-********************************************************************************
- * Copyright 2020(c) Analog Devices, Inc.
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *  - Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- *  - Neither the name of Analog Devices, Inc. nor the names of its
- *    contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *  - The use of this software may or may not infringe the patent rights
- *    of one or more patent holders.  This license does not release you
- *    from the requirement that you obtain separate licenses from these
- *    patent holders to use this software.
- *  - Use of the software either in source or binary form, must be run
- *    on or directly connected to an Analog Devices Inc. component.
- *
- * THIS SOFTWARE IS PROVIDED BY ANALOG DEVICES "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, NON-INFRINGEMENT,
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL ANALOG DEVICES BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, INTELLECTUAL PROPERTY RIGHTS, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
-
-/******************************************************************************/
-/***************************** Include Files **********************************/
-/******************************************************************************/
-
 #include "maxim_uart.h"
 #include "maxim_irq.h"
 #include "maxim_spi.h"
@@ -122,21 +79,91 @@ int main(void)
 		.size = MAX_SIZE_BASE_ADDR,
 	};
 
+	// Page 74, example setup procedure
 	status = ad7124_setup(&ad7124_device, &ad7124_initial);
 	printf("ad7124_setup: >>>>    %04d    <<<<\r\n\r\n", status);
 
-
-	uint32_t x = 0x6969;
-	status = ad7124_read_register2(ad7124_device, AD7124_Data, &x);
-	printf("ad7124_read_register2: >>>>    %04d    <<<<    >>>>    %04d    <<<<\r\n\r\n", status, x);
+	ad7124_write_register2(ad7124_device, AD7124_Error_En, AD7124_ERREN_REG_MCLK_CNT_EN | AD7124_ERREN_REG_SPI_IGNORE_ERR_EN);
 
 
+	uint32_t x;
+	
+	// x = 0x6969;
+	// status = ad7124_read_register2(ad7124_device, AD7124_ADC_Control, &x);
+	// printf("ad7124_read_register2: AD7124_ADC_Control >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+
+	for(int i = 0; i < 1000; i++) {
+		printf(".");
+		fflush(stdout);
+	}
+	
+	x = 0x6969;
+	status = ad7124_read_register2(ad7124_device, AD7124_Mclk_Count, &x);
+	printf("ad7124_read_register2: AD7124_Mclk_Count >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+
+	for(int i = 0; i < 1000; i++) {
+		printf(".");
+		fflush(stdout);
+	}
+
+	x = 0x6969;
+	status = ad7124_read_register2(ad7124_device, AD7124_Error, &x);
+	printf("ad7124_read_register2: AD7124_Error >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+
+	for(int i = 0; i < 1000; i++) {
+		printf(".");
+		fflush(stdout);
+	}
+
+	x = 0x6969;
+	status = ad7124_read_register2(ad7124_device, AD7124_ID, &x);
+	printf("ad7124_read_register2: AD7124_ID >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+
+	for(int i = 0; i < 1000; i++) {
+		printf(".");
+		fflush(stdout);
+	}
+
+	x = 0x6969;
+	status = ad7124_read_register2(ad7124_device, AD7124_Mclk_Count, &x);
+	printf("ad7124_read_register2: AD7124_Mclk_Count >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+
+	// x = AD7124_ADC_CTRL_REG_CONT_READ | AD7124_ADC_CTRL_REG_REF_EN | (0b11<<6) | 0b00;
+	// // printf("               setting AD7124_ADC_Control >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
+	// status = ad7124_write_register2(ad7124_device, AD7124_ADC_Control, x);
+
+	// Set up temperature measurements. Setup 1.
+
+	ad7124_write_register2(ad7124_device, AD7124_Config_0,  0b0000100001110000); // Setup 0: bipolar, internal reference, 1x
+	ad7124_write_register2(ad7124_device, AD7124_Channel_0, 0b1000000000000001); // Channel 0 uses setup 0 and measures IN0 - IN1
+
+	ad7124_write_register2(ad7124_device, AD7124_Config_1,  0b0000100001110000); // Setup 1: bipolar, internal reference, 1x
+	ad7124_write_register2(ad7124_device, AD7124_Channel_1, 0b1001001000010001); // Channel 1 uses setup 1 and measures temperature - AVss
+
+	{
+		int32_t			value;
+		uint32_t reg_temp;
+		int32_t ret;
+
+		for(int i = 0; i < 100; i++)
+		{
+			ret = ad7124_wait_for_conv_ready(ad7124_device, 1000000);
+			if (ret != 0)
+				return ret;
+			ret = ad7124_read_data(ad7124_device, &value);
+			if (ret != 0)
+				return ret;
+			printf("%d %04x %d\r\n", i, (uint32_t)value, ret);
+		}
+
+	}
+	
+	x = 0x6969;
+	status = ad7124_read_register2(ad7124_device, AD7124_Mclk_Count, &x);
+	printf("ad7124_read_register2: AD7124_Mclk_Count >>>>    %04d    <<<<    >>>>    %04x    <<<<\r\n\r\n", status, x);
 
 	fflush(stdout);
-	if (status < 0)
-    {
-		return status;
-    }
+	return 0;
 
 	status = no_os_uart_remove(ud);
 
