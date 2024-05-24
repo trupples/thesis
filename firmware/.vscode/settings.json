@@ -3,5 +3,13 @@
     "cortex-debug.openocdPath": "${env:MAXIM_PATH}/Libraries/../Tools/OpenOCD/openocd",
     
     "cmake.configureOnOpen": false,
-    "MAXIM_PATH": "/MaximSDK",
+    "MAXIM_PATH": "~/MaximSDK",
+    "files.associations": {
+        "no_os_uart.h": "c",
+        "typeinfo": "c",
+        "atomic": "c",
+        "mstd_atomic": "c",
+        "ad7124.h": "c",
+        "iio_ad7124_exg.h": "c"
+    },
 }

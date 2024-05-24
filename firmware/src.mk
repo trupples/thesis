@@ -1,13 +1,13 @@
 SRC_DIRS += $(PROJECT)/src
 SRC_DIRS += $(INCLUDE)
-SRC_DIRS += $(DRIVERS)/adc/ad7124
 
 # Platform drivers
 INCS += $(PLATFORM_DRIVERS)/maxim_uart.h \
         $(PLATFORM_DRIVERS)/maxim_irq.h \
         $(PLATFORM_DRIVERS)/maxim_spi.h \
         $(PLATFORM_DRIVERS)/maxim_uart_stdio.h \
-        $(PLATFORM_DRIVERS)/../common/maxim_dma.h
+        $(PLATFORM_DRIVERS)/../common/maxim_dma.h \
+        $(DRIVERS)/adc/ad7124/ad7124.h
 
 SRCS += $(PLATFORM_DRIVERS)/maxim_uart.c \
         $(PLATFORM_DRIVERS)/maxim_irq.c \
@@ -23,7 +23,8 @@ SRCS += $(PLATFORM_DRIVERS)/maxim_uart.c \
         $(NO-OS)/util/no_os_alloc.c \
         $(NO-OS)/util/no_os_list.c \
         $(NO-OS)/util/no_os_mutex.c \
-        $(NO-OS)/util/no_os_lf256fifo.c
+        $(NO-OS)/util/no_os_lf256fifo.c \
+        $(DRIVERS)/adc/ad7124/ad7124.c
 
 # Bodge to inject `-lm` in the `ld` call because `no-OS/tools/scripts/maxim.mk` resets `LDFLAGS`
 EXTRA_LIBS += m
