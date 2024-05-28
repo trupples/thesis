@@ -1,3 +1,5 @@
+#undef IIO_SUPPORT
+
 #include "parameters.h"
 #include "no_os_uart.h"
 #include "maxim_uart.h"
@@ -5,6 +7,7 @@
 #include "maxim_spi.h"
 #include "ad7124.h"
 #include "ad7124_regs.h"
+
 
 #ifdef IIO_SUPPORT
 #include "iio_ad7124_exg.h"
@@ -68,13 +71,7 @@ int main()
 		.spi_rdy_poll_cnt = 1000
 	};
 
-    struct ad7124_dev *ad7124;
-	status = ad7124_setup(&ad7124, &ad7124_init);
-    if(status != 0)
-    {
-        printf("ad7124_setup failed with status %d\r\n", status);
-        return status;
-    }
+
 
 #ifdef IIO_SUPPORT
     // Tear down UART stdio
@@ -110,6 +107,53 @@ int main()
 
     // Console only logic
     printf("iio disabled, running in console-only mode\r\n");
+
+    for(int i = 0; i < 100; i++)
+    {
+        printf(".");
+        no_os_mdelay(50);
+        fflush(stdout);
+    }
+    printf("\n");
+    
+    struct ad7124_dev *ad7124;
+	status = ad7124_setup(&ad7124, &ad7124_init);
+    if(status != 0)
+    {
+        printf("ad7124_setup failed with status %d\r\n", status);
+        return status;
+    }
+
+    ad7124_set_power_mode(ad7124, AD7124_HIGH_POWER);
+    ad7124_reg_write_msk(ad7124, AD7124_ADC_CTRL_REG, AD7124_ADC_CTRL_REG_DATA_STATUS, 0);
+
+    struct ad7124_analog_inputs ain = { .ainp = AD7124_AIN0, .ainm = AD7124_AIN1 };
+    ad7124_connect_analog_input(ad7124, 0, ain);
+    ad7124_assign_setup(ad7124, 0, 0); // setup 0 for channel 0
+    ad7124_set_polarity(ad7124, true, 0); // bipolar
+    ad7124_set_reference_source(ad7124, INTERNAL_REF, 0, true); // use internal ref with setup 0
+    ad7124_enable_buffers(ad7124, true, true, 0); // Enable both input and reference buffer for setup 0
+    
+    // Set PGA0 to 128x
+    ad7124_reg_write_msk(ad7124, AD7124_CFG0_REG, AD7124_CFG_REG_PGA(7), 0);
+
+    ad7124_set_channel_status(ad7124, 0, true); // enable channel 0
+
+    while(true)
+    {
+        fflush(stdout);
+        int32_t val;
+        status = ad7124_read_data(ad7124, &val);
+        if(status)
+        {
+            printf("Error: %d\n");
+        }
+        int32_t statusreg = ad7124->regs[AD7124_Status].value;
+        printf("%2d %9d ", statusreg&0xf, val);
+
+        printf("\n");
+        fflush(stdout);
+    }
 
 #endif // IIO_SUPPORT
 }
