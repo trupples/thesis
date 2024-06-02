@@ -127,3 +127,35 @@ https://github.com/dzhu/myo-raw
 https://github.com/ruoshiwen/ros_gforce/
 
 Also collected all pre-2024-03 log entries from the 2 obsidians and put them here.
+
+## 2024-03...
+
+## 2024-04...
+
+## 2024-05...
+
+!!! TODO collect 2024-03 2024-04 2024-05 notes !!!
+
+## 2024-05-20
+
+met with Tassos
+
+TODO ros2, ros2\_control, hardware interface
+#section hardware interface
+
+#section validation against an existing device
+
+## 2024-05-28
+
+AD7124 not good enough :(
+
+While it can sample 19200 sps on a single channel, and dividing that by 16 (or 8) would make it seem like we could easily measure 1024 sps per channel, switching channels incurs an extra dead time for the digital filter to settle. With this delay in mind, switching between 16 channels would lead to an effective 60-80 sps per channel depending on the setup. Oh no, I'll have to change the board... That's a big bummer, especially given the calendar.
+
+## 2024-06-02
+
+Will need to write about the difference between:
+- iio on uc & serial + ros2\_control hardware interface on host (chosen variant)
+- micro-ros on uc w/ serial custom transport + micro-ros-agent on host
+
+Will have to ask about ros-lite and what the deal was with that, since I don't see it fitting into any part of the project.
+
