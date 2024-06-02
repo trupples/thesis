@@ -10,6 +10,8 @@
         "atomic": "c",
         "mstd_atomic": "c",
         "ad7124.h": "c",
-        "iio_ad7124_exg.h": "c"
+        "iio_ad7124_exg.h": "c",
+        "iio_ad7124.h": "c",
+        "maxim_uart_stdio.h": "c"
     },
 }

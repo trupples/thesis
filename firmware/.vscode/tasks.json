@@ -20,6 +20,21 @@
             "type": "shell",
             "command": "make clean -C ${workspaceFolder} MAXIM_PATH=${env:MAXIM_PATH}",
             "group": "build",
-        }
+        },
+        {
+            "label": "erase flash",
+            "type": "shell",
+            "command": "${env:MAXIM_PATH}/Tools/OpenOCD/openocd",
+            "args": [
+                "-s", "${env:MAXIM_PATH}/Tools/OpenOCD/scripts",
+                "-f", "interface/cmsis-dap.cfg",
+                "-f", "target/MAX78000.cfg",
+                "-c", "\"init; reset halt; max32xxx mass_erase 0;\"",
+                "-c", "exit"
+            ],
+            "group":"build",
+            "problemMatcher": [],
+            "dependsOn":[]
+        },
     ],
 }
