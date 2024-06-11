@@ -1,6 +1,6 @@
 {
-    "cortex-debug.gdbPath": "${env:MAXIM_PATH}/Tools/GNUTools/10.3/bin/arm-none-eabi-gdb",
-    "cortex-debug.openocdPath": "${env:MAXIM_PATH}/Libraries/../Tools/OpenOCD/openocd",
+    "cortex-debug.gdbPath": "${config:MAXIM_PATH}/Tools/GNUTools/10.3/bin/arm-none-eabi-gdb",
+    "cortex-debug.openocdPath": "${config:MAXIM_PATH}/Libraries/../Tools/OpenOCD/openocd",
     
     "cmake.configureOnOpen": false,
     "MAXIM_PATH": "~/MaximSDK",
@@ -12,6 +12,9 @@
         "ad7124.h": "c",
         "iio_ad7124_exg.h": "c",
         "iio_ad7124.h": "c",
-        "maxim_uart_stdio.h": "c"
+        "maxim_uart_stdio.h": "c",
+        "iio_types.h": "c",
+        "errno.h": "c",
+        "iio_ad4114_exg.h": "c"
     },
 }

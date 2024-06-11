@@ -9,11 +9,11 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "preLaunchTask": "Build",
-            "svdFile": "${env:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
+            "svdFile": "${config:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
             "configFiles": [
                 "${workspaceFolder}/build/firmware.elf.openocd"
             ],
-            "searchDir": [ "${env:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
+            "searchDir": [ "${config:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
             "runToEntryPoint": "main",
             "showDevDebugOutput": "none"
         },
@@ -26,13 +26,13 @@
             "device": "cmsis-dap",
             "servertype": "openocd",
             "preLaunchTask": "Build",
-            "svdFile": "${env:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
+            "svdFile": "${config:MAXIM_PATH}/Libraries/CMSIS/Device/Maxim/MAX78000/Include/MAX78000.svd",
             "configFiles": [
                 "interface/cmsis-dap.cfg","target/MAX78000.cfg"
             ],
-            "searchDir": [ "${env:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
+            "searchDir": [ "${config:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
             "runToEntryPoint": "main",
-            "showDevDebugOutput": "none"
+            "showDevDebugOutput": "raw",
         }
     ]
 }

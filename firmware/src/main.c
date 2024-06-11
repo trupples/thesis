@@ -1,4 +1,4 @@
-#undef IIO_SUPPORT
+//#undef IIO_SUPPORT
 
 #include "parameters.h"
 #include "no_os_uart.h"
@@ -6,17 +6,8 @@
 #include "no_os_spi.h"
 #include "maxim_spi.h"
 #include "no_os_delay.h"
-// #include "ad4114.h"
-// #include "ad4114_regs.h"
-
-
-/* Communication Register bits */
-#define AD4114_COMM_REG_WEN    (0 << 7)
-#define AD4114_COMM_REG_WR     (0 << 6)
-#define AD4114_COMM_REG_RD     (1 << 6)
-#define AD4114_COMM_REG_RA(x)  ((x) & 0x3F)
-
-
+#include "ad717x.h"
+#include "ad411x_regs.h"
 
 #ifdef IIO_SUPPORT
 #include "iio_ad4114_exg.h"
@@ -27,7 +18,7 @@ char _iio_ad4114_read_buf[1024];
 
 int main()
 {
-    int status;
+    int ret;
 
     // Set up UART
     struct max_uart_init_param uart_extra_init = {
@@ -46,16 +37,14 @@ int main()
 
     // Set up UART stdio
     struct no_os_uart_desc *uart;
-	status = no_os_uart_init(&uart, &uart_init);
-    if(status != 0)
+	ret = no_os_uart_init(&uart, &uart_init);
+    if(ret != 0)
     {
-        printf("no_os_uart_init failed with status %d\r\n", status);
-        return status;
+        printf("no_os_uart_init failed with ret %d\r\n", ret);
+        return ret;
     }
 
 	no_os_uart_stdio(uart);
-
-    printf("Hello, world!\r\n");
 
     // Set up SPI
     struct max_spi_init_param maxim_spi_init = {
@@ -74,11 +63,40 @@ int main()
 	};
 
     // Set up AD4114
-	// struct ad4114_init_param ad4114_init = {
-	// 	.spi_init = &spi_init,
-	// 	.regs = ad4114_init_regs_default,
-	// 	.spi_rdy_poll_cnt = 1000
-	// };
+	ad717x_init_param ad4114_init = {
+        .spi_init = spi_init,
+        .regs = ad4111_regs,
+        .num_regs = sizeof(ad4111_regs) / sizeof(ad4111_regs[0]),
+        .active_device = ID_AD4114,
+        .num_channels = 16,
+        .num_setups = 8,
+        .mode = CONTINUOUS
+    };
+
+    for(int i = 0; i < 16; i++)
+    {
+        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VINCOM;
+        ad4114_init.chan_map[i].channel_enable = 0;
+        ad4114_init.chan_map[i].setup_sel = i % 8;
+    }
+
+    for(int i = 0; i < 8; i++)
+    {
+        ad4114_init.setups[i].bi_unipolar = 0; // unused anyway?
+        ad4114_init.setups[i].input_buff = 1;
+        ad4114_init.setups[i].ref_buff = 1;
+        ad4114_init.setups[i].ref_source = INTERNAL_REF;
+
+        ad4114_init.filter_configuration[i].odr = 0b01010; // => 1007/1008 Hz
+    }
+
+    ad717x_dev *ad4114 = NULL;
+    ret = AD717X_Init(&ad4114, ad4114_init);
+    if(ret)
+    {
+        return ret;
+    }
+
 
 #ifdef IIO_SUPPORT
     // Tear down UART stdio
@@ -86,13 +104,13 @@ int main()
     no_os_uart_remove(uart);
 
     // Set up IIO
-    struct iio_data_buffer iio_ad7124_read_buf = {
-		.buff = _iio_ad7124_read_buf,
-		.size = sizeof(_iio_ad7124_read_buf),
+    struct iio_data_buffer iio_ad4114_read_buf = {
+		.buff = _iio_ad4114_read_buf,
+		.size = sizeof(_iio_ad4114_read_buf),
 	};
 
     struct iio_app_device devices[] = {
-        IIO_APP_DEVICE("ad7124-8-exg", ad7124, &iio_ad7124_exg, &iio_ad7124_read_buf, NULL, NULL)
+        IIO_APP_DEVICE("ad4114-exg", ad4114, &iio_ad4114_exg, &iio_ad4114_read_buf, NULL, NULL)
     };
 
     struct iio_app_desc *app;
@@ -102,10 +120,10 @@ int main()
 	app_init.nb_devices = 1;
 	app_init.uart_init_params = uart_init;
 
-    status = iio_app_init(&app, app_init);
-    if (status != 0)
+    ret = iio_app_init(&app, app_init);
+    if (ret != 0)
     {
-        return status;
+        return ret;
     }
 
     return iio_app_run(app);
@@ -123,119 +141,7 @@ int main()
     }
     printf("\n");
     
-    printf("The AD4114 doesn't yet have no-OS support so we're doing this from scratch!\r\n");
-
-    struct no_os_spi_desc *spi;
-    int ret = no_os_spi_init(&spi, &spi_init);
-    if(ret < 0)
-    {
-        printf("Error in no_os_spi_init!\r\n");
-        return 1;
-    }
-    printf("no_os_spi_init!\r\n");
-
-    uint8_t buf[8] = { 0 };
-
-    // Read ID
-
-    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(7);
-
-    ret = no_os_spi_write_and_read(spi, buf, 4);
-    if (ret < 0)
-    {
-        printf("Error in no_os_spi_write_and_read!\r\n");
-        return 1;
-    }
-    printf("no_os_spi_write_and_read!\r\n");
-
-    printf("Read from REG_ID: %02x %02x %02x %02x\r\n", buf[0], buf[1], buf[2], buf[3]);
-
-    // adc mode
-    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x01);
-    buf[1] = 0b10100000; // internal reference, sincly_cyc, 0 delay
-    buf[2] = 0b00000000; // continuous conversion, internal oscillator
-    ret = no_os_spi_write_and_read(spi, buf, 3);
-    if (ret < 0)
-    {
-        printf("Error in no_os_spi_write_and_read!\r\n");
-        return 1;
-    }
     
-    // setup 0
-    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x20);
-    buf[1] = 0b00011111; // bipolar, buffer everything
-    buf[2] = 0b00100000; // internal reference
-    ret = no_os_spi_write_and_read(spi, buf, 3);
-    if (ret < 0)
-    {
-        printf("Error in no_os_spi_write_and_read!\r\n");
-        return 1;
-    }
-
-    // filter 0
-    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x28);
-    buf[1] = 0b00000000; 
-    buf[2] = 0b00001010; // 1007 SPS
-    ret = no_os_spi_write_and_read(spi, buf, 3);
-    if (ret < 0)
-    {
-        printf("Error in no_os_spi_write_and_read!\r\n");
-        return 1;
-    }
-
-    // channel 0
-    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(16);
-    buf[1] = 0b10000000; // enable, setup 0
-    //buf[2] = 0b00100000; // VIN1 - VIN0
-    buf[2] = 0b00010000; // VIN0 - VINCOM
-    
-    ret = no_os_spi_write_and_read(spi, buf, 3);
-    if (ret < 0)
-    {
-        printf("Error in no_os_spi_write_and_read!\r\n");
-        return 1;
-    }
-
-    while(true)
-    {
-        buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(0);
-        buf[1] = 0;
-        ret = no_os_spi_write_and_read(spi, buf, 2);
-        if (ret < 0)
-        {
-            printf("Error in no_os_spi_write_and_read!\r\n");
-            return 1;
-        }
-
-        if(buf[1] & 0x80)
-        {
-            // ~RDY
-        }
-        else
-        {
-            buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(4);
-            buf[1] = 0;
-            buf[2] = 0;
-            buf[3] = 0;
-            ret = no_os_spi_write_and_read(spi, buf, 4);
-            if (ret < 0)
-            {
-                printf("Error in no_os_spi_write_and_read!\r\n");
-                return 1;
-            }
-
-            printf("0x%02x%02x%02x,\r\n", buf[1], buf[2], buf[3]);
-        }
-    }
-
-    ret = no_os_spi_remove(spi);
-    if(ret < 0)
-    {
-        printf("Error in no_os_spi_remove!\r\n");
-        return 1;
-    }
-
-    printf("Done!\r\n");
 
 #endif // IIO_SUPPORT
 }
