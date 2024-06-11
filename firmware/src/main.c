@@ -5,16 +5,25 @@
 #include "maxim_uart.h"
 #include "no_os_spi.h"
 #include "maxim_spi.h"
-#include "ad7124.h"
-#include "ad7124_regs.h"
+#include "no_os_delay.h"
+// #include "ad4114.h"
+// #include "ad4114_regs.h"
+
+
+/* Communication Register bits */
+#define AD4114_COMM_REG_WEN    (0 << 7)
+#define AD4114_COMM_REG_WR     (0 << 6)
+#define AD4114_COMM_REG_RD     (1 << 6)
+#define AD4114_COMM_REG_RA(x)  ((x) & 0x3F)
+
 
 
 #ifdef IIO_SUPPORT
-#include "iio_ad7124_exg.h"
+#include "iio_ad4114_exg.h"
 #include "iio_app.h"
 #endif
 
-char _iio_ad7124_read_buf[1024];
+char _iio_ad4114_read_buf[1024];
 
 int main()
 {
@@ -64,14 +73,12 @@ int main()
 		.extra = &maxim_spi_init
 	};
 
-    // Set up AD7124
-	struct ad7124_init_param ad7124_init = {
-		.spi_init = &spi_init,
-		.regs = ad7124_init_regs_default,
-		.spi_rdy_poll_cnt = 1000
-	};
-
-
+    // Set up AD4114
+	// struct ad4114_init_param ad4114_init = {
+	// 	.spi_init = &spi_init,
+	// 	.regs = ad4114_init_regs_default,
+	// 	.spi_rdy_poll_cnt = 1000
+	// };
 
 #ifdef IIO_SUPPORT
     // Tear down UART stdio
@@ -108,7 +115,7 @@ int main()
     // Console only logic
     printf("iio disabled, running in console-only mode\r\n");
 
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < 10; i++)
     {
         printf(".");
         no_os_mdelay(50);
@@ -116,44 +123,119 @@ int main()
     }
     printf("\n");
     
-    struct ad7124_dev *ad7124;
-	status = ad7124_setup(&ad7124, &ad7124_init);
-    if(status != 0)
+    printf("The AD4114 doesn't yet have no-OS support so we're doing this from scratch!\r\n");
+
+    struct no_os_spi_desc *spi;
+    int ret = no_os_spi_init(&spi, &spi_init);
+    if(ret < 0)
     {
-        printf("ad7124_setup failed with status %d\r\n", status);
-        return status;
+        printf("Error in no_os_spi_init!\r\n");
+        return 1;
+    }
+    printf("no_os_spi_init!\r\n");
+
+    uint8_t buf[8] = { 0 };
+
+    // Read ID
+
+    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(7);
+
+    ret = no_os_spi_write_and_read(spi, buf, 4);
+    if (ret < 0)
+    {
+        printf("Error in no_os_spi_write_and_read!\r\n");
+        return 1;
+    }
+    printf("no_os_spi_write_and_read!\r\n");
+
+    printf("Read from REG_ID: %02x %02x %02x %02x\r\n", buf[0], buf[1], buf[2], buf[3]);
+
+    // adc mode
+    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x01);
+    buf[1] = 0b10100000; // internal reference, sincly_cyc, 0 delay
+    buf[2] = 0b00000000; // continuous conversion, internal oscillator
+    ret = no_os_spi_write_and_read(spi, buf, 3);
+    if (ret < 0)
+    {
+        printf("Error in no_os_spi_write_and_read!\r\n");
+        return 1;
+    }
+    
+    // setup 0
+    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x20);
+    buf[1] = 0b00011111; // bipolar, buffer everything
+    buf[2] = 0b00100000; // internal reference
+    ret = no_os_spi_write_and_read(spi, buf, 3);
+    if (ret < 0)
+    {
+        printf("Error in no_os_spi_write_and_read!\r\n");
+        return 1;
     }
 
-    ad7124_set_power_mode(ad7124, AD7124_HIGH_POWER);
-    ad7124_reg_write_msk(ad7124, AD7124_ADC_CTRL_REG, AD7124_ADC_CTRL_REG_DATA_STATUS, 0);
+    // filter 0
+    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(0x28);
+    buf[1] = 0b00000000; 
+    buf[2] = 0b00001010; // 1007 SPS
+    ret = no_os_spi_write_and_read(spi, buf, 3);
+    if (ret < 0)
+    {
+        printf("Error in no_os_spi_write_and_read!\r\n");
+        return 1;
+    }
 
-    struct ad7124_analog_inputs ain = { .ainp = AD7124_AIN0, .ainm = AD7124_AIN1 };
-    ad7124_connect_analog_input(ad7124, 0, ain);
-    ad7124_assign_setup(ad7124, 0, 0); // setup 0 for channel 0
-    ad7124_set_polarity(ad7124, true, 0); // bipolar
-    ad7124_set_reference_source(ad7124, INTERNAL_REF, 0, true); // use internal ref with setup 0
-    ad7124_enable_buffers(ad7124, true, true, 0); // Enable both input and reference buffer for setup 0
+    // channel 0
+    buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_WR | AD4114_COMM_REG_RA(16);
+    buf[1] = 0b10000000; // enable, setup 0
+    //buf[2] = 0b00100000; // VIN1 - VIN0
+    buf[2] = 0b00010000; // VIN0 - VINCOM
     
-    // Set PGA0 to 128x
-    ad7124_reg_write_msk(ad7124, AD7124_CFG0_REG, AD7124_CFG_REG_PGA(7), 0);
-
-    ad7124_set_channel_status(ad7124, 0, true); // enable channel 0
+    ret = no_os_spi_write_and_read(spi, buf, 3);
+    if (ret < 0)
+    {
+        printf("Error in no_os_spi_write_and_read!\r\n");
+        return 1;
+    }
 
     while(true)
     {
-        fflush(stdout);
-        int32_t val;
-        status = ad7124_read_data(ad7124, &val);
-        if(status)
+        buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(0);
+        buf[1] = 0;
+        ret = no_os_spi_write_and_read(spi, buf, 2);
+        if (ret < 0)
         {
-            printf("Error: %d\n");
+            printf("Error in no_os_spi_write_and_read!\r\n");
+            return 1;
         }
-        int32_t statusreg = ad7124->regs[AD7124_Status].value;
-        printf("%2d %9d ", statusreg&0xf, val);
 
-        printf("\n");
-        fflush(stdout);
+        if(buf[1] & 0x80)
+        {
+            // ~RDY
+        }
+        else
+        {
+            buf[0] = AD4114_COMM_REG_WEN | AD4114_COMM_REG_RD | AD4114_COMM_REG_RA(4);
+            buf[1] = 0;
+            buf[2] = 0;
+            buf[3] = 0;
+            ret = no_os_spi_write_and_read(spi, buf, 4);
+            if (ret < 0)
+            {
+                printf("Error in no_os_spi_write_and_read!\r\n");
+                return 1;
+            }
+
+            printf("0x%02x%02x%02x,\r\n", buf[1], buf[2], buf[3]);
+        }
     }
+
+    ret = no_os_spi_remove(spi);
+    if(ret < 0)
+    {
+        printf("Error in no_os_spi_remove!\r\n");
+        return 1;
+    }
+
+    printf("Done!\r\n");
 
 #endif // IIO_SUPPORT
 }
