@@ -14,7 +14,7 @@
 #include "iio_app.h"
 #endif
 
-char _iio_ad4114_read_buf[1024];
+char _iio_ad4114_samples_buf[16 * 4 * 1024]; // 16 channels, 1024 samples, 4 bytes/sample
 
 int main()
 {
@@ -72,10 +72,29 @@ int main()
         .num_setups = 8,
         .mode = CONTINUOUS
     };
+    
+    ad4114_init.chan_map[0].analog_inputs.analog_input_pairs = VIN0_VINCOM;
+    ad4114_init.chan_map[1].analog_inputs.analog_input_pairs = VIN1_VINCOM;
+    ad4114_init.chan_map[2].analog_inputs.analog_input_pairs = VIN1_VIN0;
+
+    /*
+    ad4114_init.chan_map[3].analog_inputs.analog_input_pairs = VIN3_VINCOM;
+    ad4114_init.chan_map[4].analog_inputs.analog_input_pairs = VIN4_VINCOM;
+    ad4114_init.chan_map[5].analog_inputs.analog_input_pairs = VIN5_VINCOM;
+    ad4114_init.chan_map[6].analog_inputs.analog_input_pairs = VIN6_VINCOM;
+    ad4114_init.chan_map[7].analog_inputs.analog_input_pairs = VIN7_VINCOM;
+    ad4114_init.chan_map[8].analog_inputs.analog_input_pairs = VIN8_VINCOM;
+    ad4114_init.chan_map[9].analog_inputs.analog_input_pairs = VIN9_VINCOM;
+    ad4114_init.chan_map[10].analog_inputs.analog_input_pairs = VIN10_VINCOM;
+    ad4114_init.chan_map[11].analog_inputs.analog_input_pairs = VIN11_VINCOM;
+    ad4114_init.chan_map[12].analog_inputs.analog_input_pairs = VIN12_VINCOM;
+    ad4114_init.chan_map[13].analog_inputs.analog_input_pairs = VIN13_VINCOM;
+    ad4114_init.chan_map[14].analog_inputs.analog_input_pairs = VIN14_VINCOM;
+    ad4114_init.chan_map[15].analog_inputs.analog_input_pairs = VIN15_VINCOM;
+    */
 
     for(int i = 0; i < 16; i++)
     {
-        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VINCOM;
         ad4114_init.chan_map[i].channel_enable = 0;
         ad4114_init.chan_map[i].setup_sel = i % 8;
     }
@@ -105,8 +124,8 @@ int main()
 
     // Set up IIO
     struct iio_data_buffer iio_ad4114_read_buf = {
-		.buff = _iio_ad4114_read_buf,
-		.size = sizeof(_iio_ad4114_read_buf),
+		.buff = _iio_ad4114_samples_buf,
+		.size = sizeof(_iio_ad4114_samples_buf),
 	};
 
     struct iio_app_device devices[] = {

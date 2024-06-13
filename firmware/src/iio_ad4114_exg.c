@@ -60,6 +60,22 @@ static struct iio_ad4114_exg_pair_string iio_ad4114_exg_pair_strings[] = {
 	{VIN6_VINCOM, "VIN6-VINCOM"},
 	{VIN7_VIN6, "VIN7-VIN6"},
 	{VIN7_VINCOM, "VIN7-VINCOM"},
+    {VIN0_VIN1, "VIN8-VIN9"},
+	{VIN0_VINCOM, "VIN8-VINCOM"},
+	{VIN1_VIN0, "VIN9-VIN8"},
+	{VIN1_VINCOM, "VIN9-VINCOM"},
+    {VIN0_VIN1, "VIN10-VIN11"},
+	{VIN0_VINCOM, "VIN10-VINCOM"},
+	{VIN1_VIN0, "VIN11-VIN10"},
+	{VIN1_VINCOM, "VIN11-VINCOM"},
+    {VIN0_VIN1, "VIN12-VIN13"},
+	{VIN0_VINCOM, "VIN12-VINCOM"},
+	{VIN1_VIN0, "VIN13-VIN12"},
+	{VIN1_VINCOM, "VIN13-VINCOM"},
+    {VIN0_VIN1, "VIN14-VIN15"},
+	{VIN0_VINCOM, "VIN14-VINCOM"},
+	{VIN1_VIN0, "VIN15-VIN14"},
+	{VIN1_VINCOM, "VIN15-VINCOM"},
 	{TEMPERATURE_SENSOR, "Temperature"},
 	{REFERENCE, "Reference"}
 };
@@ -290,6 +306,10 @@ static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
     {
         for(int j = 0; j < num_channels; j++)
         {
+            ret = AD717X_WaitForReady(dev, AD717X_CONV_TIMEOUT);
+            if (ret < 0)
+                return ret;
+
             int32_t data;
             ret = AD717X_ReadData(dev, &data);
             if(ret)
