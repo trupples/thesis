@@ -81,6 +81,13 @@ static struct iio_ad4114_exg_pair_string iio_ad4114_exg_pair_strings[] = {
 };
 static const int iio_ad4114_exg_num_pair_strings = sizeof(iio_ad4114_exg_pair_strings) / sizeof(iio_ad4114_exg_pair_strings[0]);
 
+
+int num;
+void handle_sample_ready_irq()
+{
+    num++;
+}
+
 static int32_t iio_ad4114_exg_channel_get_input(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
     ad717x_dev *dev = (ad717x_dev *)device;
@@ -208,8 +215,8 @@ typedef int attr_handler(void *, char *, uint32_t, const struct iio_ch_info *, i
 struct iio_attribute iio_ad4114_exg_channel_attributes[] = {
     { .name = "input",           .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_channel_get_input,           .store = (attr_handler*) iio_ad4114_exg_channel_set_input },
     { .name = "input_available", .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_channel_get_input_available, .store = 0 },
-    { .name = "raw",             .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_channel_get_raw,           .store = 0 },
-    { .name = "scale",           .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_channel_get_scale,         .store = 0 },
+    { .name = "raw",             .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_channel_get_raw,             .store = 0 },
+    { .name = "scale",           .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_channel_get_scale,           .store = 0 },
     { 0 } // Terminates the list
 };
 
@@ -346,6 +353,16 @@ struct iio_attribute iio_ad4114_exg_attributes[] = {
     { 0 } // Terminates the list
 }; 
 
+static int32_t debug_get_num(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
+{
+    return snprintf(buf, len, "%d", num);
+}
+
+struct iio_attribute iio_ad4114_debug_attributes[] = {
+    { .name = "num_irq_triggers", .priv = 0, .shared = IIO_SEPARATE, .show = (attr_handler*) debug_get_num, .store = 0 },
+    { 0 }
+};
+
 // Adapt IIO debug read function signature to AD717X_ReadRegister's
 int32_t ad4114_debug_read(ad717x_dev *dev, uint32_t reg, uint32_t *readval)
 {
@@ -363,7 +380,7 @@ struct iio_device iio_ad4114_exg = {
     .num_ch = 16,
     .channels = iio_ad4114_exg_channels,
     .attributes = iio_ad4114_exg_attributes,
-    .debug_attributes = 0,
+    .debug_attributes = iio_ad4114_debug_attributes,
     .buffer_attributes = 0,
 
     .pre_enable = (int32_t (*)())iio_ad4114_exg_pre_enable,

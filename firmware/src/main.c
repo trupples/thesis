@@ -5,16 +5,21 @@
 #include "maxim_uart.h"
 #include "no_os_spi.h"
 #include "maxim_spi.h"
+#include "no_os_irq.h"
+#include "maxim_gpio_irq.h"
 #include "no_os_delay.h"
 #include "ad717x.h"
 #include "ad411x_regs.h"
 
 #ifdef IIO_SUPPORT
+#include "iio_trigger.h"
 #include "iio_ad4114_exg.h"
 #include "iio_app.h"
 #endif
 
 char _iio_ad4114_samples_buf[16 * 4 * 1024]; // 16 channels, 1024 samples, 4 bytes/sample
+
+extern void handle_sample_ready_irq();
 
 int main()
 {
@@ -55,7 +60,7 @@ int main()
 
 	struct no_os_spi_init_param spi_init = {
 		.chip_select = 1, // SS1 pin P0_11, incorrectly labelled as SS0 on the datasheet
-		.max_speed_hz = 1000000,
+		.max_speed_hz = 20000000,
 		.mode = NO_OS_SPI_MODE_3,
 		.device_id = 1, // MXC_SPI_GET_SPI(1) = MXC_SPI0
 		.platform_ops = &max_spi_ops,
@@ -72,41 +77,21 @@ int main()
         .num_setups = 8,
         .mode = CONTINUOUS
     };
-    
-    ad4114_init.chan_map[0].analog_inputs.analog_input_pairs = VIN0_VINCOM;
-    ad4114_init.chan_map[1].analog_inputs.analog_input_pairs = VIN1_VINCOM;
-    ad4114_init.chan_map[2].analog_inputs.analog_input_pairs = VIN1_VIN0;
-
-    /*
-    ad4114_init.chan_map[3].analog_inputs.analog_input_pairs = VIN3_VINCOM;
-    ad4114_init.chan_map[4].analog_inputs.analog_input_pairs = VIN4_VINCOM;
-    ad4114_init.chan_map[5].analog_inputs.analog_input_pairs = VIN5_VINCOM;
-    ad4114_init.chan_map[6].analog_inputs.analog_input_pairs = VIN6_VINCOM;
-    ad4114_init.chan_map[7].analog_inputs.analog_input_pairs = VIN7_VINCOM;
-    ad4114_init.chan_map[8].analog_inputs.analog_input_pairs = VIN8_VINCOM;
-    ad4114_init.chan_map[9].analog_inputs.analog_input_pairs = VIN9_VINCOM;
-    ad4114_init.chan_map[10].analog_inputs.analog_input_pairs = VIN10_VINCOM;
-    ad4114_init.chan_map[11].analog_inputs.analog_input_pairs = VIN11_VINCOM;
-    ad4114_init.chan_map[12].analog_inputs.analog_input_pairs = VIN12_VINCOM;
-    ad4114_init.chan_map[13].analog_inputs.analog_input_pairs = VIN13_VINCOM;
-    ad4114_init.chan_map[14].analog_inputs.analog_input_pairs = VIN14_VINCOM;
-    ad4114_init.chan_map[15].analog_inputs.analog_input_pairs = VIN15_VINCOM;
-    */
 
     for(int i = 0; i < 16; i++)
     {
         ad4114_init.chan_map[i].channel_enable = 0;
-        ad4114_init.chan_map[i].setup_sel = i % 8;
+        ad4114_init.chan_map[i].setup_sel = i / 2;
     }
 
     for(int i = 0; i < 8; i++)
     {
-        ad4114_init.setups[i].bi_unipolar = 0; // unused anyway?
+        ad4114_init.setups[i].bi_unipolar = 1; // bipolar coding, offset binary. code = 2^{n-1} * (Vin * 0.1 / Vref + 1). Vin = (code / 2^{n-1} - 1) * Vref * 10
         ad4114_init.setups[i].input_buff = 1;
         ad4114_init.setups[i].ref_buff = 1;
         ad4114_init.setups[i].ref_source = INTERNAL_REF;
 
-        ad4114_init.filter_configuration[i].odr = 0b01010; // => 1007/1008 Hz
+        ad4114_init.filter_configuration[i].odr = sps_1007; // => 1007/1008 Hz
     }
 
     ad717x_dev *ad4114 = NULL;
@@ -116,8 +101,39 @@ int main()
         return ret;
     }
 
-
 #ifdef IIO_SUPPORT
+    // Set up hardware trigger
+    struct no_os_irq_init_param irq_crtl_init = {
+        .irq_ctrl_id = 0,
+        .platform_ops = &max_gpio_irq_ops,
+        .extra = NULL
+    };
+
+    struct no_os_irq_ctrl_desc *gpio0_irq_ctrl;
+    ret = no_os_irq_ctrl_init(&gpio0_irq_ctrl, &irq_crtl_init);
+	if (ret)
+		return ret;
+
+    struct iio_hw_trig *ad4114_trig;
+
+    struct iio_hw_trig_cb_info ad4114_trig_callback = {
+        .event = NO_OS_EVT_GPIO,
+        .peripheral = NO_OS_GPIO_IRQ,
+        .handle = handle_sample_ready_irq
+    };
+
+    struct iio_hw_trig_init_param ad4114_trig_init = {
+        .irq_ctrl = gpio0_irq_ctrl,
+        .irq_id = 6, // DOUT/~DRDY on pin P0_6
+        .irq_trig_lvl = NO_OS_IRQ_EDGE_FALLING,
+        .cb_info = ad4114_trig_callback,
+        .name = "sample-ready"
+    };
+
+    ret = iio_hw_trig_init(&ad4114_trig, &ad4114_trig_init); // This registers the callback and everything
+	if (ret)
+		return ret;
+
     // Tear down UART stdio
     fflush(stdout);
     no_os_uart_remove(uart);
@@ -144,6 +160,8 @@ int main()
     {
         return ret;
     }
+
+    ad4114_trig->iio_desc = app->iio_desc;
 
     return iio_app_run(app);
 

@@ -15,6 +15,11 @@
         "maxim_uart_stdio.h": "c",
         "iio_types.h": "c",
         "errno.h": "c",
-        "iio_ad4114_exg.h": "c"
+        "iio_ad4114_exg.h": "c",
+        "maxim_irq.h": "c",
+        "max78000.h": "c",
+        "no_os_error.h": "c",
+        "maxim_spi.h": "c",
+        "parameters.h": "c"
     },
 }
