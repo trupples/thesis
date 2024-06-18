@@ -1,4 +1,4 @@
-//#undef IIO_SUPPORT
+// #undef IIO_SUPPORT
 
 #include "parameters.h"
 #include "no_os_uart.h"
@@ -6,10 +6,13 @@
 #include "no_os_spi.h"
 #include "maxim_spi.h"
 #include "no_os_irq.h"
-#include "maxim_gpio_irq.h"
+#include "maxim_irq.h"
+#include "no_os_timer.h"
+#include "maxim_timer.h"
 #include "no_os_delay.h"
 #include "ad717x.h"
 #include "ad411x_regs.h"
+#include "no_os_alloc.h"
 
 #ifdef IIO_SUPPORT
 #include "iio_trigger.h"
@@ -17,9 +20,10 @@
 #include "iio_app.h"
 #endif
 
-char _iio_ad4114_samples_buf[16 * 4 * 1024]; // 16 channels, 1024 samples, 4 bytes/sample
-
-extern void handle_sample_ready_irq();
+void please(void *ctx) {
+    printf("P");
+    fflush(stdout);
+}
 
 int main()
 {
@@ -101,36 +105,65 @@ int main()
         return ret;
     }
 
-#ifdef IIO_SUPPORT
-    // Set up hardware trigger
-    struct no_os_irq_init_param irq_crtl_init = {
-        .irq_ctrl_id = 0,
-        .platform_ops = &max_gpio_irq_ops,
+    // Set up hardware timer trigger to regularly check for new samples even before the client requests them so we have continuity between buffer reads
+    
+    struct no_os_timer_desc *samplerdy_timer;
+    struct no_os_timer_init_param samplerdy_timer_init = {
+        .id = 0, // Use TMR0_IRQn for this timer's IRQ
+        .freq_hz = 320000, // Has to be faster than the total sample rate = 16 * channel sample rate
+        .ticks_count = 10, // Trigger at every 10 ticks
+        .platform_ops = &max_timer_ops,
         .extra = NULL
     };
 
-    struct no_os_irq_ctrl_desc *gpio0_irq_ctrl;
-    ret = no_os_irq_ctrl_init(&gpio0_irq_ctrl, &irq_crtl_init);
+    ret = no_os_timer_init(&samplerdy_timer, &samplerdy_timer_init);
+	if (ret)
+		return ret;
+    
+
+	/* Set counter to 0 */
+	ret = no_os_timer_counter_set(samplerdy_timer,0);
 	if (ret)
 		return ret;
 
-    struct iio_hw_trig *ad4114_trig;
-
-    struct iio_hw_trig_cb_info ad4114_trig_callback = {
-        .event = NO_OS_EVT_GPIO,
-        .peripheral = NO_OS_GPIO_IRQ,
-        .handle = handle_sample_ready_irq
+    struct no_os_irq_ctrl_desc *irq_ctrl;
+    struct no_os_irq_init_param irq_crtl_init = {
+        .irq_ctrl_id = 0,
+        .platform_ops = &max_irq_ops,
+        .extra = NULL
     };
+    
+    ret = no_os_irq_ctrl_init(&irq_ctrl, &irq_crtl_init);
+	if (ret)
+		return ret;
 
+	ret = no_os_irq_set_priority(irq_ctrl, TMR0_IRQn, 1);
+	if (ret)
+		return ret;
+
+    irq_crtl_init.extra = samplerdy_timer->extra;
+
+#ifdef IIO_SUPPORT
+
+    struct iio_hw_trig *ad4114_trig;
+    struct iio_hw_trig_cb_info ad4114_trig_callback = {
+        .event = NO_OS_EVT_TIM_ELAPSED,
+        .peripheral = NO_OS_TIM_IRQ,
+        .handle = MXC_TMR0
+    };
     struct iio_hw_trig_init_param ad4114_trig_init = {
-        .irq_ctrl = gpio0_irq_ctrl,
-        .irq_id = 6, // DOUT/~DRDY on pin P0_6
-        .irq_trig_lvl = NO_OS_IRQ_EDGE_FALLING,
+        .irq_id = TMR0_IRQn,
         .cb_info = ad4114_trig_callback,
-        .name = "sample-ready"
+        .name = "sample-ready",
+        .irq_ctrl = irq_ctrl,
     };
 
     ret = iio_hw_trig_init(&ad4114_trig, &ad4114_trig_init); // This registers the callback and everything
+	if (ret)
+		return ret;
+    
+    // Do I not have to start/stop this based on the selected trigger?
+    ret = no_os_timer_start(samplerdy_timer);
 	if (ret)
 		return ret;
 
@@ -139,21 +172,38 @@ int main()
     no_os_uart_remove(uart);
 
     // Set up IIO
+
+    const int buf_length = 256;
+    char *_iio_ad4114_samples_buf = no_os_calloc(16 * 4, buf_length); // 16 channels * 4 bytes, 2000 samples
+    if(!_iio_ad4114_samples_buf)
+    {
+        return -ENOMEM;
+    }
+
     struct iio_data_buffer iio_ad4114_read_buf = {
 		.buff = _iio_ad4114_samples_buf,
-		.size = sizeof(_iio_ad4114_samples_buf),
+		.size = 16 * 4 * buf_length,
 	};
 
     struct iio_app_device devices[] = {
         IIO_APP_DEVICE("ad4114-exg", ad4114, &iio_ad4114_exg, &iio_ad4114_read_buf, NULL, NULL)
     };
 
-    struct iio_app_desc *app;
-	struct iio_app_init_param app_init = { 0 };
+    struct iio_trigger_init trigs[] = {
+        IIO_APP_TRIGGER("sample-ready", ad4114_trig, &adc_iio_timer_trig_desc)
+    };
 
-    app_init.devices = devices;
-	app_init.nb_devices = 1;
-	app_init.uart_init_params = uart_init;
+    devices[0].default_trigger_id = "trigger0";
+
+    struct iio_app_desc *app;
+	struct iio_app_init_param app_init = {
+        .devices = devices,
+        .nb_devices = NO_OS_ARRAY_SIZE(devices),
+        .uart_init_params = uart_init,
+        .trigs = trigs,
+        .nb_trigs = NO_OS_ARRAY_SIZE(trigs),
+        .irq_desc = irq_ctrl
+    };
 
     ret = iio_app_init(&app, app_init);
     if (ret != 0)
@@ -162,6 +212,15 @@ int main()
     }
 
     ad4114_trig->iio_desc = app->iio_desc;
+
+    // BODGE:
+	// ret = no_os_irq_enable(irq_ctrl, TMR0_IRQn);
+	// if (ret)
+    // {
+    //     printf("%s : %d\r\n", __LINE__, ret);
+    //     return ret;
+    // }
+    // :BODGE
 
     return iio_app_run(app);
 
@@ -178,7 +237,41 @@ int main()
     }
     printf("\n");
     
+    struct no_os_callback_desc irq_cb = {
+		.callback = please,
+		.ctx = NULL,
+		.event = NO_OS_EVT_TIM_ELAPSED,
+		.handle = MXC_TMR0,
+		.peripheral = NO_OS_TIM_IRQ
+	};
+
+	ret = no_os_irq_register_callback(irq_ctrl, TMR0_IRQn, &irq_cb);
+	if (ret)
+    {
+        printf("%s : %d\r\n", __LINE__, ret);
+        return ret;
+    }
     
+	ret = no_os_irq_enable(irq_ctrl, TMR0_IRQn);
+	if (ret)
+    {
+        printf("%s : %d\r\n", __LINE__, ret);
+        return ret;
+    }
+
+	ret = no_os_timer_start(samplerdy_timer);
+	if (ret)
+    {
+        printf("%s : %d\r\n", __LINE__, ret);
+        return ret;
+    }
+    
+    for(int i = 0; i < 10; i++)
+    {
+        printf(".");
+        no_os_mdelay(50);
+        fflush(stdout);
+    }
 
 #endif // IIO_SUPPORT
 }

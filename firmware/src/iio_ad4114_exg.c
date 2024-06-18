@@ -35,6 +35,7 @@ may be changed without any errors.
 #include <string.h>
 #include "iio.h"
 #include "iio_types.h"
+#include "iio_trigger.h"
 #include "ad717x.h" // Contains AD4114 driver, despite the filename
 #include "errno.h"
 
@@ -81,12 +82,7 @@ static struct iio_ad4114_exg_pair_string iio_ad4114_exg_pair_strings[] = {
 };
 static const int iio_ad4114_exg_num_pair_strings = sizeof(iio_ad4114_exg_pair_strings) / sizeof(iio_ad4114_exg_pair_strings[0]);
 
-
-int num;
-void handle_sample_ready_irq()
-{
-    num++;
-}
+int num = 0;
 
 static int32_t iio_ad4114_exg_channel_get_input(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
@@ -170,7 +166,7 @@ static int32_t iio_ad4114_exg_channel_get_raw(void *device, char *buf, uint32_t 
 
 static int32_t iio_ad4114_exg_channel_get_scale(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "0.0000014901161193847656");
+    return snprintf(buf, len, "1.4901161193847656"); // uV per LSB
 }
 
 static int32_t iio_ad4114_exg_get_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
@@ -259,6 +255,11 @@ struct iio_channel iio_ad4114_exg_channels[] = {
 
 // Device methods
 
+// global, bad! should move into an iio_ad4114_exg struct
+int gbad_channel_offset[16] = { -1 };
+int gbad_num_channels = 0;
+int gbad_last_channel = -1;
+
 static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
 {
     // TODO assign setups?
@@ -270,6 +271,16 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
         if(ret)
         {
             return ret;
+        }
+    }
+
+    gbad_num_channels = 0;
+    for(int i = 0; i < 16; i++)
+    {
+        if(mask & NO_OS_BIT(i))
+        {
+            gbad_channel_offset[i] = gbad_num_channels++;
+            gbad_last_channel = i;
         }
     }
 
@@ -293,43 +304,50 @@ static int32_t iio_ad4114_exg_post_disable(void *device)
 
 static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
 {
-    int ret;
+    return 0;
+}
+
+static int32_t gbad_next_sample[16] = {0};
+
+static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
+{
     ad717x_dev *dev = dev_data->dev;
 
-    int channel_offset[16] = { -1 };
-    int num_channels = 0;
-    for(int i = 0; i < 16; i++)
+    // Got a trigger -> check if any of the channels are readable
+
+    // Check if RDY
+	ad717x_st_reg *statusReg = AD717X_GetReg(dev, AD717X_STATUS_REG);
+	if(!statusReg)
+		return -EINVAL;
+
+    int ret = AD717X_ReadRegister(dev, AD717X_STATUS_REG);
+    if(ret < 0)
     {
-        if((dev_data->buffer->active_mask >> i) & 1)
-        {
-            channel_offset[i] = num_channels++;
-        }
+        return ret;
+    }
+    
+    bool nready = (statusReg->value & AD717X_STATUS_REG_RDY) == 0;
+    if(nready)
+    {
+        return 0;
     }
 
-    // One "sample" = measurements of all channels
-    int32_t sample[16] = { 0 };
-
-    for(int i = 0; i < dev_data->buffer->samples; i++)
+    // Read out the last conversion
+    int32_t data;
+    ret = AD717X_ReadData(dev, &data);
+    if(ret)
     {
-        for(int j = 0; j < num_channels; j++)
-        {
-            ret = AD717X_WaitForReady(dev, AD717X_CONV_TIMEOUT);
-            if (ret < 0)
-                return ret;
+        return ret;
+    }
 
-            int32_t data;
-            ret = AD717X_ReadData(dev, &data);
-            if(ret)
-            {
-                return ret;
-            }
+    uint8_t status = data & 0xff;
+    int channel = status & AD717X_STATUS_REG_CH(7);
+    gbad_next_sample[gbad_channel_offset[channel]] = data >> 8; // most significant 3 bytes are the data
 
-            uint8_t status = data & 0xff;
-            int channel = status & AD717X_STATUS_REG_CH(7);
-            sample[channel_offset[channel]] = data >> 8; // most significant 3 bytes are the data
-        }
-
-        ret = iio_buffer_push_scan(dev_data->buffer, sample);
+    // Got a full sample of all channels, push it to the buffer!
+    if(channel == gbad_last_channel)
+    {
+        ret = iio_buffer_push_scan(dev_data->buffer, gbad_next_sample);
         if(ret)
         {
             return ret;
@@ -337,11 +355,6 @@ static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
     }
 
     return 0;
-}
-
-static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
-{
-    return -ENOSYS;
 }
 
 // Device definition
@@ -375,6 +388,33 @@ int32_t ad4114_debug_read(ad717x_dev *dev, uint32_t reg, uint32_t *readval)
     *readval = dev->regs[reg].value;
     return 0;
 }
+
+
+int ad4114_trig_enable(void *trig)
+{
+    if(!trig)
+		return -EINVAL;
+
+	struct iio_hw_trig *desc = trig;
+
+	return no_os_irq_enable(desc->irq_ctrl, desc->irq_id);
+}
+
+int ad4114_trig_disable(void *trig)
+{
+    if(!trig)
+		return -EINVAL;
+
+	struct iio_hw_trig *desc = trig;
+
+	return no_os_irq_disable(desc->irq_ctrl, desc->irq_id);
+}
+
+struct iio_trigger adc_iio_timer_trig_desc = {
+	.is_synchronous = true,
+	.enable = iio_trig_enable,
+	.disable = iio_trig_disable,
+};
 
 struct iio_device iio_ad4114_exg = {
     .num_ch = 16,

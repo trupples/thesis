@@ -3,7 +3,7 @@ SRC_DIRS += $(INCLUDE)
 
 # Platform drivers
 INCS += $(PLATFORM_DRIVERS)/maxim_uart.h \
-        $(PLATFORM_DRIVERS)/maxim_gpio_irq.h \
+        $(PLATFORM_DRIVERS)/maxim_timer.h \
         $(PLATFORM_DRIVERS)/maxim_irq.h \
         $(PLATFORM_DRIVERS)/maxim_spi.h \
         $(PLATFORM_DRIVERS)/maxim_uart_stdio.h \
@@ -13,7 +13,7 @@ INCS += $(PLATFORM_DRIVERS)/maxim_uart.h \
         $(NO-OS)/iio/iio_trigger.h
 
 SRCS += $(PLATFORM_DRIVERS)/maxim_uart.c \
-        $(PLATFORM_DRIVERS)/maxim_gpio_irq.c \
+        $(PLATFORM_DRIVERS)/maxim_timer.c \
         $(PLATFORM_DRIVERS)/maxim_irq.c \
         $(PLATFORM_DRIVERS)/maxim_spi.c \
         $(PLATFORM_DRIVERS)/maxim_delay.c \
@@ -23,6 +23,7 @@ SRCS += $(PLATFORM_DRIVERS)/maxim_uart.c \
         $(DRIVERS)/api/no_os_spi.c \
         $(DRIVERS)/api/no_os_irq.c \
         $(DRIVERS)/api/no_os_dma.c \
+        $(DRIVERS)/api/no_os_timer.c \
         $(NO-OS)/util/no_os_util.c \
         $(NO-OS)/util/no_os_alloc.c \
         $(NO-OS)/util/no_os_list.c \
