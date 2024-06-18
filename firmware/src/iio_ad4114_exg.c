@@ -1,50 +1,20 @@
-/*
-TODO IMPLEMENT THIS:
-
-iio:device0: ad4114-8-exg (buffer capable)
-    16 channels found:
-        voltage0..15:  (input, index: 0..15, format: le:u24/32>>0)
-        channel-specific attributes:
-            attr  0: ainp (rw)
-            attr  1: ainp_available (r): a0 a1 ... a15 zero temp
-            attr  2: ainm (rw)
-            attr  3: ainm_available (r): a0 a1 ... a15 zero=singleended
-            attr  4: pga (rw)
-            attr  5: pga_available (r): 1 2 4 8 16 32 64 128
-            attr  6: raw (r)
-            attr  7: scale (r)
-    
-    device-specific attributes:
-        attr  0: clocksource
-        attr  1: clocksource_available: internal external
-        attr  2: powerdown
-        attr  3: sampling_frequency
-        attr  4: sampling_frequency_available: 2048 1024 512 idk??
-    
-    debug attributes:
-        debug attr  0: direct_reg_access
-
-config registers will be automatically assigned based on requested channel
-attributes. if more than 8 configurations are needed by active channels,
-an error will occur when activating a channel. inactive channels' configs
-may be changed without any errors.
-
-*/
+#include "iio_ad4114_exg.h"
 
 #include <stdio.h>
 #include <string.h>
 #include "iio.h"
-#include "iio_types.h"
 #include "iio_trigger.h"
-#include "ad717x.h" // Contains AD4114 driver, despite the filename
-#include "errno.h"
+#include "ad717x.h"
+#include "ad411x_regs.h"
+#include "no_os_error.h"
+#include "no_os_alloc.h"
+#include "no_os_timer.h"
 
 // Attribute getters and setters
-struct iio_ad4114_exg_pair_string {
+static struct {
     enum ad717x_analog_input_pairs pair;
-    const char string[13]; // Longest is "VINxx-VINCOM"
-};
-static struct iio_ad4114_exg_pair_string iio_ad4114_exg_pair_strings[] = {
+    const char *string;
+} iio_ad4114_exg_pair_strings[] = {
     {VIN0_VIN1, "VIN0-VIN1"},
 	{VIN0_VINCOM, "VIN0-VINCOM"},
 	{VIN1_VIN0, "VIN1-VIN0"},
@@ -82,11 +52,11 @@ static struct iio_ad4114_exg_pair_string iio_ad4114_exg_pair_strings[] = {
 };
 static const int iio_ad4114_exg_num_pair_strings = sizeof(iio_ad4114_exg_pair_strings) / sizeof(iio_ad4114_exg_pair_strings[0]);
 
-int num = 0;
-
 static int32_t iio_ad4114_exg_channel_get_input(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    ad717x_dev *dev = (ad717x_dev *)device;
+    iio_ad4114_exg_dev *iio_dev = device;
+    ad717x_dev *dev = iio_dev->dev;
+
     int ret = AD717X_ReadRegister(dev, AD717X_CHMAP0_REG + channel->ch_num);
     if(ret)
     {
@@ -107,11 +77,13 @@ static int32_t iio_ad4114_exg_channel_get_input(void *device, char *buf, uint32_
     // Value read from register does not match any known input: device is in an undocumented state
     // Not 100% sure EIO is the correct error for this.
     return -EIO;
-    // return snprintf(buf, len, "? %03x", input);
 }
 
 static int32_t iio_ad4114_exg_channel_set_input(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
+    iio_ad4114_exg_dev *iio_dev = device;
+    ad717x_dev *dev = iio_dev->dev;
+    
     enum ad717x_analog_input_pairs pair = 0; // 0 is an invalid value, can be used as a sentry
 
     for(int i = 0; i < iio_ad4114_exg_num_pair_strings; i++)
@@ -128,7 +100,6 @@ static int32_t iio_ad4114_exg_channel_set_input(void *device, char *buf, uint32_
         return -EINVAL;
     }
 
-    ad717x_dev *dev = (ad717x_dev *) device;
     int ret = ad717x_connect_analog_input(dev, channel->ch_num, (union ad717x_analog_inputs) {.analog_input_pairs = pair});
     if(ret)
     {
@@ -152,8 +123,9 @@ static int32_t iio_ad4114_exg_channel_get_input_available(void *device, char *bu
 
 static int32_t iio_ad4114_exg_channel_get_raw(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-
-    ad717x_dev *dev = (ad717x_dev *) device;
+    iio_ad4114_exg_dev *iio_dev = device;
+    ad717x_dev *dev = iio_dev->dev;
+    
     int32_t raw = 0;
     int ret = ad717x_single_read(dev, channel->ch_num, &raw);
     if(ret)
@@ -254,17 +226,11 @@ struct iio_channel iio_ad4114_exg_channels[] = {
 #undef IIO_AD4114_EXG_CHAN_DEF
 
 // Device methods
-
-// global, bad! should move into an iio_ad4114_exg struct
-int gbad_channel_offset[16] = { -1 };
-int gbad_num_channels = 0;
-int gbad_last_channel = -1;
-
 static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
 {
-    // TODO assign setups?
-
-    ad717x_dev *dev = (ad717x_dev *) device;
+    iio_ad4114_exg_dev *iio_dev = device;
+    ad717x_dev *dev = iio_dev->dev;
+    
     for(int i = 0; i < 16; i++)
     {
         int ret = ad717x_set_channel_status(dev, i, (mask >> i) & 1);
@@ -274,13 +240,12 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
         }
     }
 
-    gbad_num_channels = 0;
+    iio_dev->last_enabled_channel = 0;
     for(int i = 0; i < 16; i++)
     {
         if(mask & NO_OS_BIT(i))
         {
-            gbad_channel_offset[i] = gbad_num_channels++;
-            gbad_last_channel = i;
+            iio_dev->channel_offset[i] = iio_dev->last_enabled_channel++;
         }
     }
 
@@ -289,7 +254,8 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
 
 static int32_t iio_ad4114_exg_post_disable(void *device)
 {
-    ad717x_dev *dev = (ad717x_dev *) device;
+    iio_ad4114_exg_dev *iio_dev = device;
+    ad717x_dev *dev = iio_dev->dev;
 
     // Disable all channels
     for(int i = 0; i < 16; i++)
@@ -300,6 +266,8 @@ static int32_t iio_ad4114_exg_post_disable(void *device)
             return ret;
         }
     }
+    
+    return 0;
 }
 
 static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
@@ -307,11 +275,10 @@ static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
     return 0;
 }
 
-static int32_t gbad_next_sample[16] = {0};
-
 static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 {
-    ad717x_dev *dev = dev_data->dev;
+    iio_ad4114_exg_dev *iio_dev = dev_data->dev;
+    ad717x_dev *dev = iio_dev->dev;
 
     // Got a trigger -> check if any of the channels are readable
 
@@ -342,12 +309,12 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 
     uint8_t status = data & 0xff;
     int channel = status & AD717X_STATUS_REG_CH(7);
-    gbad_next_sample[gbad_channel_offset[channel]] = data >> 8; // most significant 3 bytes are the data
+    iio_dev->sample_buf[iio_dev->channel_offset[channel]] = data >> 8; // most significant 3 bytes are the data
 
     // Got a full sample of all channels, push it to the buffer!
-    if(channel == gbad_last_channel)
+    if(channel == iio_dev->last_enabled_channel)
     {
-        ret = iio_buffer_push_scan(dev_data->buffer, gbad_next_sample);
+        ret = iio_buffer_push_scan(dev_data->buffer, iio_dev->sample_buf);
         if(ret)
         {
             return ret;
@@ -365,6 +332,8 @@ struct iio_attribute iio_ad4114_exg_attributes[] = {
     { .name = "powerdown",                    .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_get_powerdown,                    .store = (attr_handler*) iio_ad4114_exg_set_powerdown },
     { 0 } // Terminates the list
 }; 
+
+int num;
 
 static int32_t debug_get_num(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
@@ -410,24 +379,121 @@ int ad4114_trig_disable(void *trig)
 	return no_os_irq_disable(desc->irq_ctrl, desc->irq_id);
 }
 
-struct iio_trigger adc_iio_timer_trig_desc = {
-	.is_synchronous = true,
-	.enable = iio_trig_enable,
-	.disable = iio_trig_disable,
-};
+int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init_param init)
+{
+    int ret;
 
-struct iio_device iio_ad4114_exg = {
-    .num_ch = 16,
-    .channels = iio_ad4114_exg_channels,
-    .attributes = iio_ad4114_exg_attributes,
-    .debug_attributes = iio_ad4114_debug_attributes,
-    .buffer_attributes = 0,
+    iio_ad4114_exg_dev *dev = no_os_calloc(1, sizeof(iio_ad4114_exg_dev));
 
-    .pre_enable = (int32_t (*)())iio_ad4114_exg_pre_enable,
-    .post_disable = (int32_t (*)())iio_ad4114_exg_post_disable,
-    .submit = (int32_t (*)())iio_ad4114_exg_submit,
-    .trigger_handler = (int32_t (*)())iio_ad4114_exg_trigger_handler,
+    if(!dev)
+        return -ENOMEM;
 
-	.debug_reg_read = (int32_t (*)())ad4114_debug_read,
-	.debug_reg_write = (int32_t (*)())AD717X_WriteRegister
-};
+    *iio_dev = dev;
+
+    // Set up AD4114
+    ad717x_init_param ad4114_init = {
+        .spi_init = *init.spi_init,
+        .regs = ad4111_regs,
+        .num_regs = sizeof(ad4111_regs) / sizeof(ad4111_regs[0]),
+        .active_device = ID_AD4114,
+        .num_channels = 16,
+        .num_setups = 8,
+        .mode = CONTINUOUS
+    };
+
+    for(int i = 0; i < 16; i++)
+    {
+        ad4114_init.chan_map[i].channel_enable = 0;
+        ad4114_init.chan_map[i].setup_sel = i / 2;
+    }
+
+    for(int i = 0; i < 8; i++)
+    {
+        ad4114_init.setups[i].bi_unipolar = 1; // bipolar coding, offset binary. code = 2^{n-1} * (Vin * 0.1 / Vref + 1). Vin = (code / 2^{n-1} - 1) * Vref * 10
+        ad4114_init.setups[i].input_buff = 1;
+        ad4114_init.setups[i].ref_buff = 1;
+        ad4114_init.setups[i].ref_source = INTERNAL_REF;
+
+        ad4114_init.filter_configuration[i].odr = sps_1007; // => 1007/1008 Hz
+    }
+
+    ret = AD717X_Init(&dev->dev, ad4114_init);
+    if(ret)
+        goto error_alloc;
+
+    // Set up timer
+    ret = no_os_timer_init(&dev->samplerdy_timer, init.samplerdy_timer_init);
+	if (ret)
+        goto error_device;
+
+    init.irq_ctrl_init->extra = dev->samplerdy_timer->extra;
+
+    // Set up timer interrupt
+    struct no_os_irq_ctrl_desc *irq_ctrl;    
+    ret = no_os_irq_ctrl_init(&irq_ctrl, init.irq_ctrl_init);
+	if (ret)
+        goto error_timer;
+
+	ret = no_os_irq_set_priority(irq_ctrl, init.trig_init->irq_id, 1);
+	if (ret)
+        goto error_timer;
+
+    init.trig_init->irq_ctrl = irq_ctrl;
+    init.trig_init->cb_info.handle = dev->samplerdy_timer; // ???
+
+    // Set up trigger
+    ret = iio_hw_trig_init(&dev->trig, init.trig_init); // This registers the callback and everything
+	if (ret)
+        goto error_trig;
+    
+    ret = no_os_timer_start(dev->samplerdy_timer);
+	if (ret)
+        goto error_trig;
+
+    dev->trig_desc = (struct iio_trigger) {
+        .is_synchronous = true,
+        .enable = iio_trig_enable,
+        .disable = iio_trig_disable,
+    };
+
+    dev->iio_dev = (struct iio_device) {
+        .num_ch = 16,
+        .channels = iio_ad4114_exg_channels,
+        .attributes = iio_ad4114_exg_attributes,
+        .debug_attributes = iio_ad4114_debug_attributes,
+        .buffer_attributes = 0,
+
+        .pre_enable = (int32_t (*)())iio_ad4114_exg_pre_enable,
+        .post_disable = (int32_t (*)())iio_ad4114_exg_post_disable,
+        .submit = (int32_t (*)())iio_ad4114_exg_submit,
+        .trigger_handler = (int32_t (*)())iio_ad4114_exg_trigger_handler,
+
+        .debug_reg_read = (int32_t (*)())ad4114_debug_read,
+        .debug_reg_write = (int32_t (*)())AD717X_WriteRegister
+    };
+
+    return 0;
+
+error_trig:
+    iio_hw_trig_remove(dev->trig);
+error_timer:
+    no_os_timer_remove(dev->samplerdy_timer);
+error_device:
+    AD717X_remove(dev->dev);
+error_alloc:
+    no_os_free(dev);
+
+    return ret;
+}
+
+int iio_ad4114_exg_remove(iio_ad4114_exg_dev *iio_dev)
+{
+    if(!iio_dev)
+        return -ENODEV;
+
+    iio_hw_trig_remove(iio_dev->trig);
+    no_os_timer_remove(iio_dev->samplerdy_timer);
+    AD717X_remove(iio_dev->dev);
+    no_os_free(iio_dev);
+    return 0;
+}

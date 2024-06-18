@@ -23,6 +23,11 @@
         "parameters.h": "c",
         "maxim_timer.h": "c",
         "no_os_delay.h": "c",
-        "iio.h": "c"
+        "iio.h": "c",
+        "maxim_uart.h": "c",
+        "common_data.h": "c",
+        "platform_includes.h": "c",
+        "string.h": "c",
+        "iio_app.h": "c"
     },
 }
