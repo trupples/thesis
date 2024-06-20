@@ -40,7 +40,7 @@ struct iio_hw_trig_init_param ad4114_trig_init = {
     .cb_info = {
         .event = NO_OS_EVT_TIM_ELAPSED,
         .peripheral = NO_OS_TIM_IRQ,
-        .handle = NULL // Must be set when initializing the trigger
+        .handle = SAMPLERDY_TIMER_HANDLE
     },
     .name = "sample-ready",
     .irq_ctrl = NULL, // Must be set when initializing the trigger

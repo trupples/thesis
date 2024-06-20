@@ -34,6 +34,7 @@ extern struct max_uart_init_param max_uart_extra_init;
 #define IRQC_EXTRA      NULL
 
 #define SAMPLERDY_TIMER_IRQ_ID TMR0_IRQn
+#define SAMPLERDY_TIMER_HANDLE MXC_TMR0
 
 
 #endif // __PARAMETERS_H__

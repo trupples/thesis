@@ -10,6 +10,9 @@
 #include "no_os_alloc.h"
 #include "no_os_timer.h"
 
+// Debug attr cos I can't get debugging to consistently work
+int num = 0;
+
 // Attribute getters and setters
 static struct {
     enum ad717x_analog_input_pairs pair;
@@ -138,7 +141,7 @@ static int32_t iio_ad4114_exg_channel_get_raw(void *device, char *buf, uint32_t 
 
 static int32_t iio_ad4114_exg_channel_get_scale(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "1.4901161193847656"); // uV per LSB
+    return snprintf(buf, len, "1.4901161193847656"); // uV / LSB
 }
 
 static int32_t iio_ad4114_exg_get_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
@@ -333,8 +336,6 @@ struct iio_attribute iio_ad4114_exg_attributes[] = {
     { 0 } // Terminates the list
 }; 
 
-int num;
-
 static int32_t debug_get_num(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
     return snprintf(buf, len, "%d", num);
@@ -405,6 +406,7 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
     {
         ad4114_init.chan_map[i].channel_enable = 0;
         ad4114_init.chan_map[i].setup_sel = i / 2;
+        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VIN1;
     }
 
     for(int i = 0; i < 8; i++)
@@ -417,12 +419,12 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
         ad4114_init.filter_configuration[i].odr = sps_1007; // => 1007/1008 Hz
     }
 
-    ret = AD717X_Init(&dev->dev, ad4114_init);
+    ret = AD717X_Init(&(dev->dev), ad4114_init);
     if(ret)
         goto error_alloc;
 
     // Set up timer
-    ret = no_os_timer_init(&dev->samplerdy_timer, init.samplerdy_timer_init);
+    ret = no_os_timer_init(&(dev->samplerdy_timer), init.samplerdy_timer_init);
 	if (ret)
         goto error_device;
 
@@ -439,10 +441,9 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
         goto error_timer;
 
     init.trig_init->irq_ctrl = irq_ctrl;
-    init.trig_init->cb_info.handle = dev->samplerdy_timer; // ???
 
     // Set up trigger
-    ret = iio_hw_trig_init(&dev->trig, init.trig_init); // This registers the callback and everything
+    ret = iio_hw_trig_init(&(dev->trig), init.trig_init); // This registers the callback and everything
 	if (ret)
         goto error_trig;
     
@@ -457,6 +458,10 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
     };
 
     dev->iio_dev = (struct iio_device) {
+        .irq_desc = irq_ctrl, // Make IIO use the already initialized irq controller
+        .read_dev = NULL,
+        .write_dev = NULL,
+
         .num_ch = 16,
         .channels = iio_ad4114_exg_channels,
         .attributes = iio_ad4114_exg_attributes,

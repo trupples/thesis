@@ -1,3 +1,6 @@
+# Use a larger heap than the default 0xC00 (see startup_max78000.S)
+HEAP_SIZE = 0x2000
+
 SRC_DIRS += $(PROJECT)/src
 SRC_DIRS += $(INCLUDE)
 

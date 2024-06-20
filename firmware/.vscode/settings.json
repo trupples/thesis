@@ -28,6 +28,14 @@
         "common_data.h": "c",
         "platform_includes.h": "c",
         "string.h": "c",
-        "iio_app.h": "c"
+        "iio_app.h": "c",
+        "no_os_alloc.h": "c",
+        "cstdlib": "c",
+        "*.tcc": "c",
+        "optional": "c",
+        "functional": "c",
+        "ranges": "c",
+        "tuple": "c",
+        "mstd_functional": "c"
     },
 }

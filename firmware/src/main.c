@@ -8,12 +8,16 @@
 #ifdef IIO_SUPPORT
 #include "iio_ad4114_exg.h"
 #include "iio_app.h"
+#else
+#include "no_os_delay.h"
 #endif
 
 void please(void *ctx) {
     printf("P");
-    fflush(stdout);
 }
+
+// Allocate this in .data instead of heap because the heap is *very* small (3KB!!!)
+char _iio_ad4114_samples_buf[16 * 4 * 256];
 
 int main()
 {
@@ -30,16 +34,9 @@ int main()
 	no_os_uart_stdio(uart);
 
 #ifdef IIO_SUPPORT
-    const int buf_length = 256;
-    char *_iio_ad4114_samples_buf = no_os_calloc(16 * 4, buf_length); // 16 channels * 4 bytes, buf_length samples
-    if(!_iio_ad4114_samples_buf)
-    {
-        return -ENOMEM;
-    }
-
     struct iio_data_buffer iio_ad4114_read_buf = {
 		.buff = _iio_ad4114_samples_buf,
-		.size = 16 * 4 * buf_length,
+		.size = sizeof(_iio_ad4114_samples_buf)
 	};
 
     iio_ad4114_exg_dev *dev;
@@ -54,6 +51,8 @@ int main()
     {
         return ret;
     }
+
+    dev->iio_dev.irq_desc->ref++; // ioan(2024-06-20) bodge to prevent irq controller from being torn down in iio_app_init when resetting UART
 
     struct iio_trigger_init trigs[] = {
         { // trigger0
@@ -84,6 +83,10 @@ int main()
         .irq_desc = NULL
     };
 
+    // Tear down UART stdio
+    fflush(stdout);
+    no_os_uart_remove(uart);
+
     ret = iio_app_init(&app, app_init);
     if (ret)
     {
@@ -91,10 +94,6 @@ int main()
     }
 
     dev->trig->iio_desc = app->iio_desc;
-
-    // Tear down UART stdio
-    fflush(stdout);
-    no_os_uart_remove(uart);
 
     // Run IIO app
     return iio_app_run(app);
@@ -111,23 +110,39 @@ int main()
         fflush(stdout);
     }
     printf("\n");
+
+    struct no_os_timer_desc *samplerdy_timer;
+    ret = no_os_timer_init(&samplerdy_timer, &samplerdy_timer_init);
+    if(ret)
+    {
+        printf("%s %d\r\n", __LINE__, ret);
+        return ret;
+    }
+
+    struct no_os_irq_ctrl_desc *irq_ctrl;
+    ret = no_os_irq_ctrl_init(&irq_ctrl, &irq_ctrl_init);
+    if(ret)
+    {
+        printf("%s %d\r\n", __LINE__, ret);
+        return ret;
+    }
+
+    ret = no_os_irq_set_priority(irq_ctrl, SAMPLERDY_TIMER_IRQ_ID, 1);
+    if(ret)
+    {
+        printf("%s %d\r\n", __LINE__, ret);
+        return ret;
+    }
     
     struct no_os_callback_desc irq_cb = {
 		.callback = please,
 		.ctx = NULL,
 		.event = NO_OS_EVT_TIM_ELAPSED,
-		.handle = MXC_TMR0,
+		.handle = SAMPLERDY_TIMER_HANDLE,
 		.peripheral = NO_OS_TIM_IRQ
 	};
 
 	ret = no_os_irq_register_callback(irq_ctrl, TMR0_IRQn, &irq_cb);
-	if (ret)
-    {
-        printf("%s : %d\r\n", __LINE__, ret);
-        return ret;
-    }
-    
-	ret = no_os_irq_enable(irq_ctrl, TMR0_IRQn);
 	if (ret)
     {
         printf("%s : %d\r\n", __LINE__, ret);
@@ -142,6 +157,20 @@ int main()
     }
     
     for(int i = 0; i < 10; i++)
+    {
+        printf(".");
+        no_os_mdelay(50);
+        fflush(stdout);
+    }
+    
+	ret = no_os_irq_enable(irq_ctrl, TMR0_IRQn);
+	if (ret)
+    {
+        printf("%s : %d\r\n", __LINE__, ret);
+        return ret;
+    }
+    
+    for(int i = 0; i < 100; i++)
     {
         printf(".");
         no_os_mdelay(50);
