@@ -32,7 +32,7 @@
             ],
             "searchDir": [ "${config:MAXIM_PATH}/Tools/OpenOCD/scripts" ],
             "runToEntryPoint": "main",
-            "showDevDebugOutput": "raw",
+            "showDevDebugOutput": "none",
         }
     ]
 }

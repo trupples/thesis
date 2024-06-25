@@ -52,8 +52,6 @@ int main()
         return ret;
     }
 
-    dev->iio_dev.irq_desc->ref++; // ioan(2024-06-20) bodge to prevent irq controller from being torn down in iio_app_init when resetting UART
-
     struct iio_trigger_init trigs[] = {
         { // trigger0
             .name = "sample-ready",
@@ -80,10 +78,11 @@ int main()
         .uart_init_params = uart_init,
         .trigs = trigs,
         .nb_trigs = NO_OS_ARRAY_SIZE(trigs),
-        .irq_desc = NULL
+        .irq_desc = dev->trig->irq_ctrl
     };
 
     // Tear down UART stdio
+    printf("Gata distractia!\r\n");
     fflush(stdout);
     no_os_uart_remove(uart);
 
@@ -112,6 +111,7 @@ int main()
     printf("\n");
 
     struct no_os_timer_desc *samplerdy_timer;
+    samplerdy_timer_init.ticks_count *= 100;
     ret = no_os_timer_init(&samplerdy_timer, &samplerdy_timer_init);
     if(ret)
     {

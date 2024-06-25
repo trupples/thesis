@@ -243,12 +243,18 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
         }
     }
 
-    iio_dev->last_enabled_channel = 0;
+    iio_dev->last_enabled_channel = -1;
+    int k = 0;
     for(int i = 0; i < 16; i++)
     {
         if(mask & NO_OS_BIT(i))
         {
-            iio_dev->channel_offset[i] = iio_dev->last_enabled_channel++;
+            iio_dev->channel_offset[i] = k++;
+            iio_dev->last_enabled_channel = i;
+        }
+        else
+        {
+            iio_dev->channel_offset[i] = -1;
         }
     }
 
@@ -296,8 +302,8 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
         return ret;
     }
     
-    bool nready = (statusReg->value & AD717X_STATUS_REG_RDY) == 0;
-    if(nready)
+    // RDY bit is 0 if new data available
+    if(statusReg->value & AD717X_STATUS_REG_RDY)
     {
         return 0;
     }
@@ -406,12 +412,12 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
     {
         ad4114_init.chan_map[i].channel_enable = 0;
         ad4114_init.chan_map[i].setup_sel = i / 2;
-        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VIN1;
+        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VINCOM;
     }
 
     for(int i = 0; i < 8; i++)
     {
-        ad4114_init.setups[i].bi_unipolar = 1; // bipolar coding, offset binary. code = 2^{n-1} * (Vin * 0.1 / Vref + 1). Vin = (code / 2^{n-1} - 1) * Vref * 10
+        ad4114_init.setups[i].bi_unipolar = 0; // bipolar coding, offset binary. code = 2^{n-1} * (Vin * 0.1 / Vref + 1). Vin = (code / 2^{n-1} - 1) * Vref * 10
         ad4114_init.setups[i].input_buff = 1;
         ad4114_init.setups[i].ref_buff = 1;
         ad4114_init.setups[i].ref_source = INTERNAL_REF;
@@ -436,7 +442,8 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
 	if (ret)
         goto error_timer;
 
-	ret = no_os_irq_set_priority(irq_ctrl, init.trig_init->irq_id, 1);
+    // Priority MUST be lower than UART RX so this doesn't cut off received characters
+	ret = no_os_irq_set_priority(irq_ctrl, init.trig_init->irq_id, 10);
 	if (ret)
         goto error_timer;
 
@@ -452,7 +459,7 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
         goto error_trig;
 
     dev->trig_desc = (struct iio_trigger) {
-        .is_synchronous = true,
+        .is_synchronous = false,
         .enable = iio_trig_enable,
         .disable = iio_trig_disable,
     };
