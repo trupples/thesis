@@ -17,5 +17,7 @@ include src.mk
 
 include $(NO-OS)/tools/scripts/generic.mk
 
+CFLAGS += -DUART_BLANA
+
 # Create build/firmware.elf.openocd required by debug plugin
 include ./debug.mk

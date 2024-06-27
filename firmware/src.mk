@@ -28,6 +28,9 @@ SRCS += $(DRIVERS)/api/no_os_uart.c \
         $(NO-OS)/util/no_os_lf256fifo.c \
         $(NO-OS)/iio/iio_trigger.c
 
+INCS += $(PROJECT)/src/debugbreak.h
+
+
 # Bodge to inject `-lm` in the `ld` call because `no-OS/tools/scripts/maxim.mk` resets `LDFLAGS`
 # EXTRA_LIBS += m
 

@@ -16,11 +16,12 @@ extern struct max_spi_init_param max_spi_ad4114_init;
 
 // USB UART
 #define UART_DEVICE_ID  0
-#define UART_BAUDRATE   (737280) // 115200
+#define UART_BAUDRATE   500000 // 115200
 #define UART_OPS        &max_uart_ops
 #define UART_EXTRA      &max_uart_extra_init
 
 #define INTC_DEVICE_ID  0 // Used by iio_app for UART
+#define UART_IRQ UART0_IRQn
 
 extern struct max_uart_init_param max_uart_extra_init;
 

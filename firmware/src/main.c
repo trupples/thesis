@@ -16,8 +16,7 @@ void please(void *ctx) {
     printf("P");
 }
 
-// Allocate this in .data instead of heap because the heap is *very* small (3KB!!!)
-char _iio_ad4114_samples_buf[16 * 4 * 256];
+char _iio_ad4114_samples_buf[16 * 4 * 1024];
 
 int main()
 {
@@ -32,6 +31,12 @@ int main()
     }
 
 	no_os_uart_stdio(uart);
+
+    for(int i = 0; i < 10; i++)
+    {
+        printf("Heyo! ");
+        fflush(stdout);
+    }
 
 #ifdef IIO_SUPPORT
     struct iio_data_buffer iio_ad4114_read_buf = {
@@ -78,7 +83,7 @@ int main()
         .uart_init_params = uart_init,
         .trigs = trigs,
         .nb_trigs = NO_OS_ARRAY_SIZE(trigs),
-        .irq_desc = dev->trig->irq_ctrl
+        .irq_desc = NULL, //dev->trig->irq_ctrl
     };
 
     // Tear down UART stdio
@@ -111,7 +116,7 @@ int main()
     printf("\n");
 
     struct no_os_timer_desc *samplerdy_timer;
-    samplerdy_timer_init.ticks_count *= 100;
+    samplerdy_timer_init.ticks_count *= 1000;
     ret = no_os_timer_init(&samplerdy_timer, &samplerdy_timer_init);
     if(ret)
     {

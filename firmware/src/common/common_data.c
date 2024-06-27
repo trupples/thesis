@@ -8,6 +8,7 @@ struct no_os_uart_init_param uart_init = {
     .parity = NO_OS_UART_PAR_NO,
     .stop = NO_OS_UART_STOP_1_BIT,
     .extra = UART_EXTRA,
+    .asynchronous_rx = true, // hai sa te vad acum
 };
 
 struct no_os_spi_init_param spi_ad4114_init = {
@@ -19,10 +20,12 @@ struct no_os_spi_init_param spi_ad4114_init = {
     .extra = SPI_EXTRA
 };
 
+#define TICKS_COUNT 5
+
 struct no_os_timer_init_param samplerdy_timer_init = {
     .id = SAMPLERDY_TIMER_ID, 
-    .freq_hz = 320000,
-    .ticks_count = 10,
+    .freq_hz = 320000 * TICKS_COUNT, // 20000Hz / channel -> sufficient even with the 1733sps ODR when using sinc3
+    .ticks_count = TICKS_COUNT,
     .platform_ops = SAMPLERDY_TIMER_OPS,
     .extra = SAMPLERDY_TIMER_EXTRA
 };

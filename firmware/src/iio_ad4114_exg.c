@@ -10,8 +10,7 @@
 #include "no_os_alloc.h"
 #include "no_os_timer.h"
 
-// Debug attr cos I can't get debugging to consistently work
-int num = 0;
+uint32_t num = 0;
 
 // Attribute getters and setters
 static struct {
@@ -146,7 +145,7 @@ static int32_t iio_ad4114_exg_channel_get_scale(void *device, char *buf, uint32_
 
 static int32_t iio_ad4114_exg_get_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "1007");
+    return snprintf(buf, len, "381"); //"1007");
 }
 
 static int32_t iio_ad4114_exg_set_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
@@ -236,7 +235,7 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
     
     for(int i = 0; i < 16; i++)
     {
-        int ret = ad717x_set_channel_status(dev, i, (mask >> i) & 1);
+        int ret = ad717x_set_channel_status(dev, i, mask & NO_OS_BIT(i));
         if(ret)
         {
             return ret;
@@ -284,45 +283,178 @@ static int32_t iio_ad4114_exg_submit(struct iio_device_data *dev_data)
     return 0;
 }
 
-static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
+// Return 0 if ready, -EAGAIN if noy yet ready, other for actual errors
+int check_ad4114_ready(iio_ad4114_exg_dev *device)
 {
-    iio_ad4114_exg_dev *iio_dev = dev_data->dev;
+    iio_ad4114_exg_dev *iio_dev = device;
     ad717x_dev *dev = iio_dev->dev;
 
-    // Got a trigger -> check if any of the channels are readable
-
-    // Check if RDY
-	ad717x_st_reg *statusReg = AD717X_GetReg(dev, AD717X_STATUS_REG);
-	if(!statusReg)
-		return -EINVAL;
-
     int ret = AD717X_ReadRegister(dev, AD717X_STATUS_REG);
-    if(ret < 0)
-    {
-        return ret;
-    }
-    
-    // RDY bit is 0 if new data available
-    if(statusReg->value & AD717X_STATUS_REG_RDY)
-    {
-        return 0;
-    }
-
-    // Read out the last conversion
-    int32_t data;
-    ret = AD717X_ReadData(dev, &data);
     if(ret)
     {
         return ret;
     }
 
-    uint8_t status = data & 0xff;
-    int channel = status & AD717X_STATUS_REG_CH(7);
-    iio_dev->sample_buf[iio_dev->channel_offset[channel]] = data >> 8; // most significant 3 bytes are the data
+    if(dev->regs[0].value & AD717X_STATUS_REG_RDY)
+    {
+        return -EAGAIN;
+    }
 
+    return 0;
+}
+
+// int AD4114_read_converted(ad717x_dev *dev, uint8_t *chan, uint32_t *data)
+// {
+//     // Start reading the data register directly. If not yet ready, the AD4114 will send back high bits even during the request byte. If after the request byte, we have received 0xff, then exit early with EAGAIN. Otherwise, a conversion result is ready, so read the whole register. 
+
+
+// 	// /** Buffer with data to send. If NULL, 0x00 will be sent */
+// 	// uint8_t			*tx_buff;
+// 	// /** Buffer where to store data. If NULL, incoming data won't be saved */
+// 	// uint8_t			*rx_buff;
+// 	// /** Length of buffers. Must have equal size. */
+// 	// uint32_t		bytes_number;
+// 	// /** If set, CS will be deasserted after the transfer */
+// 	// uint8_t			cs_change;
+// 	// /**
+// 	//  * Minimum delay (in us) between the CS de-assert event of the current message
+// 	//  * and the assert of the next one.
+// 	//  */
+// 	// uint32_t		cs_change_delay;
+// 	// /** Delay (in us) between the CS assert and the first SCLK edge. */
+// 	// uint32_t		cs_delay_first;
+// 	// /** Delay (in us) between the last SCLK edge and the CS deassert */
+// 	// uint32_t		cs_delay_last;
+
+//     char tx1[1] = { AD717X_COMM_REG_RD | AD717X_COMM_REG_RA(AD717X_DATA_REG) };
+//     char rx1[1] = { 0 };
+
+//     char tx2[5] = { 0 };
+//     char rx2[5] = { 0 };
+
+//     struct no_os_spi_msg request = {
+//         .tx_buff = tx1,
+//         .rx_buff = rx1,
+//         .bytes_number = 1,
+//         .cs_change = false
+//     }, read = {
+//         .tx_buff = tx2,
+//         .rx_buff = rx2,
+//         .bytes_number = 5, // 3 data, 1 status, 1 CRC
+//         .cs_change = true
+//     }, cancel = {
+//         .bytes_number = 1,
+//         .cs_change = true
+//     };
+
+//     no_os_spi_transfer(dev->spi_desc, &request, 1);
+//     if(rx1[0] & 1) // not ready yet
+//     {
+//         no_os_spi_transfer(dev->spi_desc, &cancel, 1);
+//         return -EAGAIN;
+//     }
+
+//     no_os_spi_transfer(dev->spi_desc, &read, 1);
+
+//     *chan = rx2[3] & 0xF;
+//     *data = (rx2[0] << 16) | (rx2[1] << 8) | rx2[2];
+//     return 0;
+// }
+
+char irq_log[1025];
+volatile int irq_log_idx;
+#define IRQLOG(x) do {irq_log[irq_log_idx++] = (x); if(irq_log_idx >= 1024) {irq_log_idx = 0; /* debug_break(); */ }} while(0)
+
+static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
+{
+    iio_ad4114_exg_dev *iio_dev = dev_data->dev;
+    ad717x_dev *dev = iio_dev->dev;
+
+    // // uint32_t sz;
+    // // no_os_cb_size(dev_data->buffer->buf, &sz); // debug
+    // // num = sz;
+
+    // // Got a trigger -> check if any of the channels are readable
+
+    // // Check if RDY
+	// ad717x_st_reg *statusReg = AD717X_GetReg(dev, AD717X_STATUS_REG);
+	// if(!statusReg)
+    // {
+    //     // irq_log[++irq_log_idx] = 'E';
+    //     // if(irq_log_idx >= 1024) irq_log_idx = 0;
+        
+	// 	return -EINVAL;
+    // }
+
+    // int ret = AD717X_ReadRegister(dev, AD717X_STATUS_REG);
+    // if(ret < 0)
+    // {
+    //     // irq_log[++irq_log_idx] = 'E';
+    //     // if(irq_log_idx >= 1024) irq_log_idx = 0;
+
+    //     return ret;
+    // }
+    
+    // // irq_log[++irq_log_idx] = statusReg->value;
+    // // if(irq_log_idx >= 1024)
+    // // {
+    // //     irq_log_idx = 0;
+    // // }
+    
+    // // RDY bit is 0 if new data available
+    // if(statusReg->value & AD717X_STATUS_REG_RDY)
+    // {
+    //     return 0;
+    // }
+
+    int ret = check_ad4114_ready(iio_dev);
+    if(ret == -EAGAIN)
+    {
+        IRQLOG(' ');
+        return 0;
+    }
+
+    if(ret)
+    {
+        IRQLOG('E');
+        return ret;
+    }
+
+    int8_t status, channel;
+    int32_t data;
+    ret = AD717X_ReadData(dev, &data);
+    if(ret)
+    {
+        IRQLOG('E');
+        return ret;
+    }
+
+    status = data & 0xff;
+    channel = status & 0xf;
+    data = data >> 8; // actual measurement is only the first 3 bytes
+
+    iio_dev->sample_buf[iio_dev->channel_offset[channel]] = data;
+    
+    IRQLOG('0' + channel);
+    
     // Got a full sample of all channels, push it to the buffer!
     if(channel == iio_dev->last_enabled_channel)
     {
+        IRQLOG('!');
+        no_os_cb_size(dev_data->buffer->buf, &num);
+        IRQLOG('0' + (num / 1000 % 10));
+        IRQLOG('0' + (num / 100 % 10));
+        IRQLOG('0' + (num / 10 % 10));
+        IRQLOG('0' + (num % 10));
+        IRQLOG('<');
+
+        // Stop acquisition if the buffer is full. Nobody's listening
+        if(num == dev_data->buffer->buf->size)
+        {
+            iio_dev->trig_desc.disable(iio_dev->trig);
+            return 0;
+        }
+
         ret = iio_buffer_push_scan(dev_data->buffer, iio_dev->sample_buf);
         if(ret)
         {
@@ -344,11 +476,11 @@ struct iio_attribute iio_ad4114_exg_attributes[] = {
 
 static int32_t debug_get_num(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "%d", num);
+    return snprintf(buf, len, "%u", num);
 }
 
 struct iio_attribute iio_ad4114_debug_attributes[] = {
-    { .name = "num_irq_triggers", .priv = 0, .shared = IIO_SEPARATE, .show = (attr_handler*) debug_get_num, .store = 0 },
+    { .name = "buffer_usage", .priv = 0, .shared = IIO_SEPARATE, .show = (attr_handler*) debug_get_num, .store = 0 },
     { 0 }
 };
 
@@ -363,27 +495,6 @@ int32_t ad4114_debug_read(ad717x_dev *dev, uint32_t reg, uint32_t *readval)
 
     *readval = dev->regs[reg].value;
     return 0;
-}
-
-
-int ad4114_trig_enable(void *trig)
-{
-    if(!trig)
-		return -EINVAL;
-
-	struct iio_hw_trig *desc = trig;
-
-	return no_os_irq_enable(desc->irq_ctrl, desc->irq_id);
-}
-
-int ad4114_trig_disable(void *trig)
-{
-    if(!trig)
-		return -EINVAL;
-
-	struct iio_hw_trig *desc = trig;
-
-	return no_os_irq_disable(desc->irq_ctrl, desc->irq_id);
 }
 
 int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init_param init)
@@ -417,17 +528,29 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
 
     for(int i = 0; i < 8; i++)
     {
-        ad4114_init.setups[i].bi_unipolar = 0; // bipolar coding, offset binary. code = 2^{n-1} * (Vin * 0.1 / Vref + 1). Vin = (code / 2^{n-1} - 1) * Vref * 10
+        ad4114_init.setups[i].bi_unipolar = 0;
         ad4114_init.setups[i].input_buff = 1;
         ad4114_init.setups[i].ref_buff = 1;
-        ad4114_init.setups[i].ref_source = INTERNAL_REF;
+        ad4114_init.setups[i].ref_source = INTERNAL_REF; // AD717X_Init will ultimately activate the internal reference
 
+        ad4114_init.filter_configuration[i].oder = sinc5_sinc1;
         ad4114_init.filter_configuration[i].odr = sps_1007; // => 1007/1008 Hz
     }
 
     ret = AD717X_Init(&(dev->dev), ad4114_init);
     if(ret)
         goto error_alloc;
+
+    // Activate CRC, status readout
+    {
+        ad717x_st_reg *interfaceReg;
+
+        interfaceReg = AD717X_GetReg(dev->dev, AD717X_IFMODE_REG);
+        interfaceReg->value |= AD717X_IFMODE_REG_CRC_EN;
+        interfaceReg->value |= AD717X_IFMODE_REG_DATA_STAT;
+        AD717X_WriteRegister(dev->dev, AD717X_IFMODE_REG);
+        AD717X_UpdateCRCSetting(dev->dev);
+    }
 
     // Set up timer
     ret = no_os_timer_init(&(dev->samplerdy_timer), init.samplerdy_timer_init);
@@ -442,24 +565,28 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
 	if (ret)
         goto error_timer;
 
-    // Priority MUST be lower than UART RX so this doesn't cut off received characters
+    init.trig_init->irq_ctrl = irq_ctrl;
+
+    // Set up IRQ priorities so that the samplerdy timer doesn't "eat" incoming UART data
 	ret = no_os_irq_set_priority(irq_ctrl, init.trig_init->irq_id, 10);
 	if (ret)
         goto error_timer;
-
-    init.trig_init->irq_ctrl = irq_ctrl;
+        
+	ret = no_os_irq_set_priority(irq_ctrl, 14, 1); // UART0_IRQn = 14 ... or 30?
+	if (ret)
+        goto error_timer;
 
     // Set up trigger
     ret = iio_hw_trig_init(&(dev->trig), init.trig_init); // This registers the callback and everything
 	if (ret)
         goto error_trig;
-    
+
     ret = no_os_timer_start(dev->samplerdy_timer);
 	if (ret)
         goto error_trig;
 
     dev->trig_desc = (struct iio_trigger) {
-        .is_synchronous = false,
+        .is_synchronous = true,
         .enable = iio_trig_enable,
         .disable = iio_trig_disable,
     };
