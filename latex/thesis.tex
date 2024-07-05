@@ -1,5 +1,9 @@
 \documentclass{thesis}
 
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary {positioning,fit,calc}
+
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
 % I don't know whether to talk in first person plural or singular
@@ -9,10 +13,18 @@
 \newcommand{\Our}{Our}
 
 % Units
-\newcommand{\mV}{\,\text{mV}}
-\newcommand{\Hz}{\,\text{Hz}}
-\newcommand{\kHz}{\,\text{kHz}}
-\newcommand{\us}{\,\text{\mu s}}
+\newcommand{\V}{\unit{\volt}}
+\newcommand{\mV}{\unit{\milli\volt}}
+\newcommand{\uV}{\unit{\micro\volt}}
+\newcommand{\nV}{\unit{\nano\volt}}
+\newcommand{\Hz}{\unit{\hertz}}
+\newcommand{\kHz}{\unit{\kilo\hertz}}
+\newcommand{\us}{\unit{\micro\second}}
+\newcommand{\mm}{\unit{\milli\meter}}
+\newcommand{\K}{\unit{K}}
+\newcommand{\ohm}{\unit{\ohm}}
+\newcommand{\kohm}{\unit{\kilo\ohm}}
+\newcommand{\dB}{\unit{\deci\bel}}
 
 % Signal names
 \newcommand{\drdy}{{\ensuremath{\mathtt{DOUT/}\overline{\mathtt{RDY}}}}}
@@ -27,93 +39,250 @@
 
 \section{Introduction}
 
-The measurement of electrical impulses originating in 
+Electrophysiology \todo{what is}
 
-Electrophysiology is \todo{scrie coaie mai mult}
+The most prevalent\todo{cite} modes of biopotential measurements are electrocardiography (ECG) and electromyography (EMG), measuring cardiac muscle potentials and skeletal muscle potentials respectively. While methods that use intracellular electrodes exist and are much more precise \todo{cite}, using surface electrodes is very common thanks to their non invasive nature, albeit at a loss of specificity due to measuring a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions.\todo{cite} On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
+
+Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
+
+We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS2 and LibIIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS2 and LibIIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts.
+
+\todo{What is ROS2}
+
+The Linux Industrial I/O (IIO) subsystem was created in 2008 and mainlined in 2012 (\href{https://github.com/torvalds/linux/commit/06458e277eac2b8761b0a04d3c808d57be281a2e}{commit \texttt{06458e2}}) to provide a simple and unified way to interact with devices with ADC or DAC capabilities, broadly ranging from plain ADC/DAC chips to Inertial Measurement Units (Accelerometers, Gyroscopes, Magnetometers), Software Defined Radio, robotic actuators and sensors, and more. Within the Linux kernel, it fills in a gap between the \textit{input} subsystem which can stream user input data and the \textit{hwmon} subsystem used for monitoring and controlling hardware state such as CPU temperature and fan settings, albeit with low refresh rate. The IIO subsystem provides a modular way to define high bandwidth communication with input/output devices directly connected to the host via SPI or I2C and specified as part of the device tree. Despite the subsystem's name, it is not limited to industrial production applications: IIO usage is ubiquitous in today's linux-based devices for integrating features such as accelerometers, gyroscopes or ambient light sensors in a uniform way, besides other hardware abstraction layers.
+
+\textit{Libiio} is a library which provices cross-platform functionality for interacting with both local and remote IIO devices within the same framework. To accomplish this, it implements the IIO Daemon (IIOD) for which it defines the \textit{IIOD protocol}. The current version of the IIOD protocol (v0.1) is based on a set of human readable commands sent via a single data stream of alternating client requests and server responses. This allows the same protocol to be used over a variety of transport layers, officially Serial (most relevant for this application), USB and TCP.
+
+We present overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
+
+\begin{thesisfigure}{Overview of information flow}{flow}
+\begin{tikzpicture}[
+    node distance=10mm,
+    component/.style={
+        rectangle, thick, draw=black
+    },
+    system/.style={
+        rectangle, thick, dashed, draw=black!40, text=black!40
+    }
+]
+    \node (pac) [] { Pacemaker cells };
+    \node (car) [component, right=of pac] { Cardiac muscle contraction };
+    \node (paccar) [fit={(pac) (car) ([yshift=1.5em]pac.north)},system,label={[text=black!40,anchor=north]north:ECG}] {};
+
+    \node (ner) [below=12mm of pac.south west, anchor=north west] { Nerve signal };
+    \node (ske) [component, below=12mm of car.south west, anchor=north west] { Skeletal muscle contraction };
+    \node [fit={(ner) (ske) ([yshift=1.5em]ner.north)},system,label={[text=black!40,anchor=north]north:EMG}] {};
+
+    \node (midcarske) at ($(car)!1!(ske)$) {};
+
+    \node (pot) [component, right=35mm of midcarske] { Potential fluctuations };
+
+    \draw [->, thick] (pac) edge (car);
+    \draw [->, thick] (car.east) edge (pot.north west);
+
+    \draw [->, thick] (ner) edge (ske);
+    \draw [->, thick] (ske.east) edge (pot.west);
+
+    \node (ele) [component, below=15mm of pot] { Surface electrodes };
+    \node (adc) [component, left=of ele] { ADC };
+    \node (amp) [component, below=of $(ele)!0.5!(adc)$] { Amplifier };
+
+    \node [fit={(ele) (amp) (adc) ([yshift=1.5em]ele.north)},system,label={[text=black!40,anchor=north]north:Electronics}] {};
+
+    \path [->, draw, thick]
+        (pot) edge (ele)
+        (ele) edge (amp)
+        (ele) edge (adc)
+        (amp) edge (adc);
+
+    \node (dri) [component, left=23mm of adc] { ADC driver };
+    \node (dev) [component, left=of dri] { IIO device };
+    \node (iod) [component, below=of dev] { IIO daemon };
+    \node (buf) [component, right=of iod] { Sample buffer };
+
+    \node [fit={(dri) (dev) ([xshift=+3mm]buf.south east) ([xshift=-3mm]iod.west) ([yshift=1.5em]dev.north)},system,label={[text=black!40,anchor=north]north:Firmware running on microcontroller}] {};
+
+    \path [<->, draw, thick]
+        (adc) edge node[very near start,above,anchor=south east] {SPI} (dri)
+        (dri) edge (dev)
+        (iod) edge (dev);
+
+    \path [->, draw, thick]
+        (dev) edge (buf)
+        (buf) edge (iod);
+
+    \node (lib) [component, below=18mm of iod] { LibIIO };
+    \node (pyt) [component, right=5mm of lib] { Python bindings };
+    \node (cpp) [component, below=5mm of pyt] { C++ bindings };
+    \node (rem) [below=25mm of lib.west,anchor=west] { Remote LibIIO instance };
+
+    \path [<->, draw, thick]
+        (iod) edge node [very near start, right, anchor=north west] {Serial over USB} (lib)
+        (lib) edge (pyt.west)
+        (lib) edge (cpp.west)
+        (lib) edge (rem);
+
+    \node (ros) [component, right=5mm of pyt] { ROS2 publisher node };
+    \node (net) [right=of ros] { ROS2 network };
+
+    \path [<->, draw, thick]
+        (pyt) edge (ros)
+        (cpp.east) edge (ros)
+        (ros) edge (net);
 
 
-
-
-Biopotential measurements are \todo{scrie coaie mai mult}
-
-Relevance: \todo{\cite{Barbero2012} chapter 7 + novel human computer interaction methods: \cite{Mller2020}, Maris maybe}
-
-- medical relevance:
-    - diagnosis
-    - rehab
-    - monitoring
-    - ???
-- Novel human-computer interaction methods
-
-\todo{FIND CITATIONS FOR THESE:}
-Various projects tackle the problem of biopotential data acquisition:
-- openBCI: expensive, low data rate
-- that one from Mark: \todo{find eet}
-- quanser board: depends on expensive ELVIS, one channel, not open
-- EXG pills: one channel, not a stand-alone product, but they're quite good for prototyping otherwise
-- \todo{MORE}
-
-\subsection{Objectives}
-
-MUST:
-- [ ] Open Hardware and So20ftware
-- [ ] 8 channels
-- [ ] Per-channel configuration
-- [ ] 1000Hz data rate (500Hz bandwidth)
-- [ ] High CMRR, PSRR (<1LSB after 50Hz filtering)
-- [ ] High SNR (>40dB EMG; >20dB for ECG)
-- [ ] Open and extensible interfacing:
-    - [ ] ROS2
-    - [ ] IIO
-
-SHOULD (unchecked go to future work):
-- [ ] 16 channels
-- [ ] Differential / single-ended configurability
-- [ ] Right Leg Drive
-- [ ] 1024Hz/2048Hz /channel data rate (1 Hz per FFT bin)
-- [ ] <1uV noise after filtering
-- [ ] 1uV precision
-
-Guiding principles:
-- [ ] Cost
-- [ ] Usability as an educational tool
-- [ ] ADI parts
-- [ ] Modularity
-
-\todo{After finishing the prototype, make a comparison table between the already existing products and mine, especially on these objectives}
+    \node [fit={(ros) (cpp) ([yshift=1.5em]lib.north west)},system,label={[text=black!40,anchor=north]north:Software running on host}] {};
+\end{tikzpicture}
+\end{thesisfigure}
 
 \newpage
 \section{Bibliographic research}
 
-(current state of the art + problem justification + possible approaches)
-
-
-Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a plethora of current-day commercial and DIY solutions, very few systems aspire to the ideals of Open Source Hardware and Open Source Software (EMG pill, openBCI, \todo{the one from Mark}), and there exist no systems that integrate with ROS2 (ros-neuro is ROS1 and they don't define hardware, just ros infrastructure) or the Linux IIO (Industrial I/O) subsystem.
-
-Of the Open Source projects, none check all our requirements, and as such this project fills in this gap and provides an end-to-end hardware and software solution for measuring multi-channel biopotential signals and exposing them to ROS2 and IIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of IIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts.
+% (current state of the art + problem justification + possible approaches)
 
 \subsection{Anatomical basis}
 
-As part of normal function, all biological cells have a difference of electrical potential between their interior and their exterior, called the \textit{membrane potential}. In the steady state, the \textit{resting membrane potential} of both skeletal muscle cells and that of cardiomyocytes (cardiac muscle cells) is in the $-70 \dots -90 \mV$ range \cite{Hopkins2006,Klabunde2011-jo}
+% (car), (ske), (pot)
 
-\todo{EMG, skeletal muscles: Sarcomere, sliding filament model}
+As part of normal function, all biological cells have a difference of electrical potential between their interior and their exterior, called the \textit{membrane potential}. In the steady state, the \textit{resting membrane potential} of both skeletal muscle cells and that of cardiomyocytes (cardiac muscle cells) is in the $\numrange{-70}{-90} \mV$ range \cite{Hopkins2006,Klabunde2011-jo}.
 
-\todo{ECG: ???}
+
+
+\todo{WIP: skeletal muscles, Sarcomere, sliding filament model, essential parts from \cite{Barbero2012}}
+
+\todo{ECG: find a reputable source to cite for cardio physiology}
+
+\subsection{Market research and literature review}
+
+Biopotential measurements are no new subject and many products already exist both in the academic and commercial fields. All are subject to engineering tradeoffs between parameters such as number of channels, sample rate, precision, noise, electrode types, etc., making each better suited to a certain use case. To the best of our research, there is no universal, modular and extensible solution to the problem of biopotential measurements. Further on, we overview some representative options for EMG / ECG DAQ systems:
+
+\subsection*{OpenBCI}
+
+Expensive, low data rate. \todo{more :)}
+
+\subsection*{ASPEN}
+
+\cite{Esposito2018}
+
+What we're doing, but better, but a PhD thesis.
+
+\todo{more :)}
+
+
+\subsection*{Quanser QNET Myoelectric board}
+
+
+
+Depends on NI Elvis; one channel; not open \todo{more :)}
+
+\subsection*{BioWare EXG Pills}
+
+Just the amplification part, no DAQ, rely on an arduino's ADC or some other. \todo{more :)}
+
+\subsection*{Cometa Pico EMG}
+
+\href{https://www.cometasystems.com/pico-emg/}{Cometa Pico EMG}
+
+not open, expensive\todo{more :)}
+
+
+\subsection*{MyoWare}
+
+\todo{more :)}
+
+\subsection*{the green one I forgot the name of}
+
+\todo{more :)}
 
 \subsection{Noise sources}
 
-\todo{Thermal noise model for baseline noise}
-\todo{ECG noise models: baseline, mains, EMG}
-\todo{do EMG noise models exist?}
+The superposition of electrical signals measurable by biopotential DAQs contains a complicated mix of noise coming from various physiological and other external factors, besides the signal of interest. Additionally, the measurement circuitry compounds noise at every step. Modeling some of the main noise components of the entire signal chain is essential for its design.
 
-\subsection{Signal chain gain management}
+Some of the studied noise sources are \textit{intrinsic} to the process and impossible to remove, such as thermal noise and the amplifier and ADC noise profiles. Others are not intrinsic, depend on the setup, and can be compensated for, such as mains hum.
 
-Stage N noise should be >= stage N+1 noise, just barely passing it, to get the most out of all stages. I should really find a citation for this, because I just know it from Mark. We can use this relationship, some noise density models, and the guaranteed datasheet figures of the components used in the signal chain to compute the ideal amplifier stage gain.
+\subsubsection{Thermal noise}
+
+Even with ideal conductors and measurements, any resistive circuit will be affected by thermal noise, as a consequence of Planck's law of blackbody radiation \cite[chapter 3.2]{Urick2015-pm}. An ideal resistor $R$ at absolute temperature $T$ will manifest thermal noise $V_n$ over a frequency window $\Delta f$ having mean squared value \( \overline{V_n^2} = 4k_BTR\Delta f \), where $k_B = 1.380649\cdot10^{−23} \unit{J\per K}$ is the Boltzmann constant.
+
+For a rough estimate of the order of magnitude of thermal noise in our biopotential measurements, we study the following hypothetical setup: Assume the electrodes attached to the patient are in thermal equilibrium at a typical skin temperature of $T \approx 308 \K$ \cite{Suarez2016}, we are limiting the frequency band to $\Delta f = 500 \Hz$ by filtering, and experiencing a typical resistance ${R \approx 3500 \ohm}$ (electrode + contact + internal resistance) \cite{Kurniawan2022}. This is only useful as a rough order estimation, because the resistance will vary depending on the electrode location, surface preparation, measured individual, electrode condition, etc. The estimated thermal noise will is:
+
+\begin{thesisequation}{thnoisevalue}
+\overline{V_n^2} = 4k_BTR\Delta f \approx 0.02977 \uV^2
+\end{thesisequation}
+
+Which can alternatively be interpreted as having an RMS noise of $\sqrt{0.02977 \uV^2} \approx 172.5 \nV$ or a noise density of $\sqrt{4k_BTR} = 7.716 \nV/\sqrt{\Hz}$. 
+
+\subsubsection{Amplifier and ADC noise}
+
+Both ADCs and amplifier circuits have specified noise figures which pose design tradeoffs. In ADCs, the noise is specified as additive noise at the input $V_{na}$, such that a measurement $V_{meas}$ of a "real" voltage $V$ will be $V_{meas} = V + V_{na}$. Amplifiers are characterized by both input noise $V_{ni}$ created by the input stage, as well as output noise $V_{no}$ created by internal circuirty and the output stage. The output of an amplifier with gain $G$ is $V_{amp} = (V + V_{ni}) \cdot G + V_{no}$. As an easier to use figure, the \textit{Input Referred Noise} is the equivalent disturbance at the input that would create both the effects of input and output noise componded. $\text{IRN} = V_{ni} + V_{no}/G$ such that we can simplify to $V_{amp} = (V + \text{IRN}) \cdot G$.
+
+This raises one of the most important design decisions of the signal chain, namely deciding on the amplification structure before the ADC. Using no amplifier at all is the most economic and also avoids $V_{ni}$ and $V_{no}$, but in the case of very small input signals, they are left to be dominated by ADC noise $V_{na}$. Adding an amplifier with unity gain only compounds amplifier noise and is as such detrimental, but further increasing the gain increases the signal-to-noise ratio (SNR):
+
+\begin{thesisequation}{snr}
+\text{SNR} = \frac{\text{"signal"}}{\text{"noise"}} = \frac{G\cdot V}{G\cdot V_{ni} + V_{no} + V_{na}} = \frac{V}{V_{ni} + (V_{no} + V_{na}) / G} \longrightarrow \frac{V}{V_{ni}}
+\end{thesisequation}
+
+Thus, given an amplifier with known $V_{ni}$ we can compute the best-case noise figure assuming "infinite" gain. The rationally convergent nature of the above expression inevitably creates a situation of diminishing returns, wherein increasing the gain will always increase the signal quality, but even relatively small gains achieve practically ideal performance.
+
+The drawback of having very large gain is the limit it incurs on the measurable range of input voltages. Any analog circuit can only handle a limited interval of voltages, which when exceeded leads to unreliable measurements, with the possibility of permanent damage to the equipment. If the ADC is limited to measuring $\pm V_{max}$, the measurable signals are implicitly limited to $\pm V_{max}/G$.
+
+\subsubsection{ECG noise models}
+
+Besides the unavoidable thermal and electronics noise, further disturbances in ECG measurements can be classified, as per \cite{Chatterjee2020}, into: low frequency ($< 0.5\Hz$) baseline wander caused by body motion and electrode contact issues, power-line artifacts ($50/60\Hz$ and their harmonics) caused by insufficient power supply decoupling when the measurement device is connected to mains power, and muscle artifacts (EMG signals). Of the three, the first two are relevant and undesireable in any biopotential measurement, while the latter is obviously the signal of interest in EMG applications.
+
+From a signal processing standpoint, a simple solution for low frequency wander and power line artifacts is using a DC blocking comb filter.
+
+\subsection{Signal chain design}
+
+\todo{figure out which parts go in the background section and which go to the design section. Currently put everything in the design section.}
+
+\subsubsection{Instrumentation amplifiers}
+
+\subsubsection{Multiplexed ADCs}
+
+\subsubsection{?}
 
 \newpage
 \section{Analysis, design and implementation}
 
-TODO: Signal chain figure:
+\subsection{Objectives}
+
+Additionally, we 
+
+\todo{Justify objectives, format these boring bullet lists in a nicer way}
+
+MUST:
+\begin{itemize}
+\item Open Hardware and So20ftware
+\item 8 channels
+\item Per-channel configuration
+\item 1000Hz data rate (500Hz bandwidth) \todo{NNNNNOOOOOOOOO}
+\item High CMRR, PSRR
+\item High SNR (>40dB EMG; >20dB for ECG)
+\item Open and extensible interfacing: ROS2, IIO
+\end{itemize}
+
+SHOULD (unchecked go to future work):
+\begin{itemize}
+\item 16 channels
+\item Differential / single-ended configurability
+\item Right Leg Drive
+\item 1024Hz/2048Hz /channel data rate (1 Hz per FFT bin)
+\item <1uV noise after filtering
+\item 1uV precision
+\end{itemize}
+
+Guiding principles:
+\begin{itemize}
+\item Cost
+\item Usability as an educational tool
+\item Use Analog Devices parts
+\item Modularity (decoupled hardware-firmware-software)
+\end{itemize}
+
+\todo{After finishing the prototype, make a comparison table between the already existing products and mine, especially on these objectives}
+
+\todo{Signal chain figure:
 1. Patient, anatomy
 2. Electrodes
 3. Buffer and amplification
@@ -125,65 +294,137 @@ TODO: Signal chain figure:
 variant A, with a network-enabled microcontroller:
 from 5, ROS2 protocol {find the name!} to ROS2 network running on the microcontroller
 variant B, with a microcontrollwe without networking capabilities:
-from 8, ROS2 protocol to ROS2 network running on the carrier board / host
+from 8, ROS2 protocol to ROS2 network running on the carrier board / host}
 
 \newpage
 \subsection{Electical part}
 
-\subsubsection{Interfacing with the {patient}}
+\subsubsection{Interfacing with the patient}
 
 The first step we control in the signal chain is the point of contact with the patient. The electrode type and quality have a great influence on the overall design, performance, and subjective user experience.
 
-Leading research: PEDOT:PSS {cite, cite, cite!}. Flexible, self-healing polymer, conforms to skin ensuring very good contact even when in motion, 
+The state of the art are conductive polymer PEDOT:PSS electrodes, thanks to their great mechanical, electrical, and chemical properties: They adhere and conform to skin, are flexible, self-healing, and have good biocompatibility, only falling behind the classic Ag/AgCl electrodes in terms of contact impedance, yet still being conductive enough for biopotential readings. \cite{Seiti2023,Hou2024} We do not consider them viable for this project due to them not being commercially available in standard and mass produced forms, being mostly a custom product experimented with in today's laboratories, even half a century after their discovery in the 1980s.
 
-DIY cheap alternative {cite that paper with DIY AgCl electrodes}
+DIY cheap alternative \todo{cite that paper with DIY AgCl electrodes}
 
-This project settles for clip-on adhesive ECG gel electrodes because:
-- Cheap, readily avaialble, standard
-- They can be interfaced with inexpensive aligator clips, besides special (but more expensive) snap clips
-Downsides:
-- Shelf life {TODO: compare expired electrode signal quality with fresh electrodes}
-- Large-ish contact area
-- Adhesive gives for a bad subjective experience {author's anecdote, or citeable? you zetetic asshole...}
+This project settles for snap-on adhesive ECG gel electrodes thanks to being cheap, readily avaialble, standardized, and they can be connected to with inexpensive aligator clips, besides special (but more expensive) snap clips. The downsides are their low shelf life \todo{compare expired electrode signal quality with fresh electrodes once I get some fresh ones}, comparatively larger contact area (cca $200\mm^2$ vs \cite{Barbero2012}'s 2mm electrode diameters), and are lacking in subjective user experience, sometimes being very painful to detach.
 
 \subsubsection{ADC}
 
-Initially chose the AD7124-8 thanks to its very diverse feature set, including: programmable gain amplifiers (which had the potential to remove the need for the external amplification stage), high precision, high number of channels, and high sample rate. Unfortunately, it is not a single cycle ADC. This means that although it has very good throughput on a single channel, after switching between two channels there is a dead time for the integrated filter to settle, which effectively reduces the per-channel sample rate to less than 100Hz when sampling all 16, which is basically useless for ECG and EMG {cite: most of the signal's useful information is in the 300Hz ballpark}
+\todo{preface on how to choose an ADC}
 
-The next choice is the AD4114. It doesn't include PGAs, but otherwise has very good specs and has a mugh higher sample rate, and a single cycle conversion mode. {stai, sigur?}
+We initially chose the AD7124-8\cite{AD7124-8} thanks to its very diverse feature set, including: programmable gain amplifiers (PGAs) which had the potential to remove the need for the external amplification stage, high precision, high number of channels, and high sample rate. Unfortunately, it is not a single cycle ADC. This means that although it has very good throughput on a single channel, when switching between two channels there is a dead time for the integrated filter to settle, which effectively reduces the per-channel sample rate to less than $100\Hz$ when sampling all 16, which is virtually useless for ECG ($f_\text{max}=150\Hz$) and EMG ($f_\text{max}=500\Hz$).
 
-TODO spec comparison between AD7124-8 and AD4114.
+Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherwise has very good specs and has a much higher sample rate and a single cycle conversion mode.
 
-\subsubsection{Amplification and buffer stage}
+\todo{spec comparison between AD7124-8 and AD4114?}
 
-Ask whether they're needed. To figure this out, we'll check if we get better measurement noise with an amplification stage than without, because in preliminary tests, we got decent signals without any amplifier. Is "decent" as well as we can get it, or can we have *great* signal quality with an amp stage? Should be able to do these computations quite easily.
+\todo{describe AD4114 function, especially: channels vs setups, internal channel sequencer, overall communication model, \textbf{how to check for new samples}, noise versus sample rate. All of these will more or less paraphrase the datasheet.}
+
+\todo{$1007\Hz$ and $6211\Hz$ are the sample rates we're most interested in}
+
+\subsubsection{Amplification stage}
+
+The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to $\Delta v \approx 1.49\uV$ if using the internal $2.5\V$ reference. At $f_s=1007\Hz$ and $f_s=6211\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$ and $\overline{V_{na,6211}^2}=74\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs:
+
+\begin{thesisequation}{SNR_no_amp}
+\begin{aligned}
+\text{SNR}_{(\dB)} &= 10\log_{10}\left(\frac{(1\mV)^2}{\overline{V_{na}^2}}\right) \\
+\text{SNR}_{1007} &\approx 34\dB \\
+\text{SNR}_{6211} &\approx 23\dB 
+\end{aligned}
+\end{thesisequation}
+
+We choose the AD8226 \cite{AD8226} instrumentation amplifier for the preamp stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth $\Delta f=500\Hz$ is:
+
+\begin{thesisequation}{8266_noise}
+\begin{aligned}
+V_{ni,RMS} = \sqrt{500\Hz \cdot (22\nV/\sqrt{\Hz})^2} = 0.492\uV \\
+V_{no,RMS} = \sqrt{500\Hz \cdot (120\nV/\sqrt{\Hz})^2} = 2.683\uV
+\end{aligned}
+\end{thesisequation}
+
+With the preamp stage added before the ADC, the total noise of a sample and the theoretical SNR ($1\mV$ input) are:
+
+\begin{thesisequation}{noise_amp}
+\begin{aligned}
+\overline{V_n^2} = \overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2} \\
+\text{SNR}_{(\dB)} = 10\log_{10}\left(\frac{(1\mV)^2}{\overline{V_{n}^2}}\right)
+\end{aligned}
+\end{thesisequation}
+
+An illustrative handful of values for various gain settings: \todo{rephrase :)}
+
+\begin{thesistable}{0.33}{l|ll}{a}{b}
+Gain & Full scale & $\text{SNR}_{(\dB)}$ \\ \hline
+1    & $5\V$      & $34\dB$ \\
+2    & $2.5\V$    &  $40\dB$ \\
+5    & $1\V$      &  $48\dB$ \\
+10   & $500\mV$   &  $54\dB$ \\
+20   & $250\mV$   &  $59\dB$ \\
+50   & $100\mV$   &  $64\dB$ \\
+100  & $50\mV$    &  $65\dB$ \\
+1000 & $5\mV$     &  $66\dB$ \\
+\end{thesistable}
+
+
+
+
+
+
+
+- adc has 24 bits of resolution => ? uV LSB => would seem like it's already suitable for our measurement ranges. Compute number of bits and SNR given a known ECG, EMG amplitude.
+- but we can do better! A pre-amp stage will amplify the signal, add some noise, but ultimately reduce the IRN.
+- can't amplify too much, though, because we don't want to exceed the full scale (or really the 0-5V supply for that matter)
+- set a hard limit for the gain so we don't clip
+- compute bits / SNR for some gain values (as well as for no amplifier)
+- plot or table showing diminishing returns. Just stop when we're <0.5-1 bits from the best we can do (gain=1000)
+
+\todo{tikz figure of signal chain}
+
+Assuming a single , followed by an ADC input noise $V_{na}$, are measuring the "true" voltage $x$, the resulting digitized sample $y$ can be decomposed into:
+
+\begin{thesisequation}{decomposey}
+y = Gx + GV_{ni} + V_{no} + V_{na}
+\end{thesisequation}
+
+Which can be rearranged to obtain an expression for RMS total noise $V_n^2$:
+
+\begin{thesisequation}{rmsnoise}
+\overline{x^2} = \frac{\overline{y^2}}{G^2} + \underbrace{\left(\overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2}\right)}_{\overline{V_n^2}}
+\end{thesisequation}
+
+
+
+
+
+
 
 \subsubsection{Microcontroller}
 
-The chosen microcontroller platform is the: {Inca nu am ales......}
-- ADARPblabla max arduino
-- MAX78000FTHR
-Both are overkill for the needs of this project.
+The chosen microcontroller platform is the MAX78000FTHR.
 
 Main requirements for the microcontroller:
 - SPI rate high enough to read the ADC at the wanted sample rate
-- Enough CPU freq and memory to run the IIO Daemon. \todo{iiod specs? if they don't exist, I could do a small experiment for this paper}
+- Enough CPU freq and memory to run the IIO Daemon.
 
 Nice-to-haves:
 - Networking capabilities so it can run a ROS2 node as a standalone device, not needing another "carrier" to forward the data to the ROS network.
 
 Suitable very cheap microcontrollers:
-- ATMEGA328p series {TEST?}
 - ESP8266, ESP32
-- RP Pico wifi and clones (groundstudio pico)
-I sure bloody hope no-OS has support for them......... \todo{check}
+- RP2040 based boards (Raspberry Pi Pico, GroundStudio Pico, other clones)
+
+The popular (yet more and more obsolete) ATMEGA328p of Arduino fame isn't fast enough for recording and further transferring all 16 channels. Especially not with a non-custom IIOD / ros-micro implementation.
 
 \newpage
 \subsection{Firmware part}
 
 \todo{Short 100-200 word intro about firmware}
 
-\todo{What is No-OS and why do \we use it}
+\todo{The no-OS framework}
+
+\todo{What is No-OS and why do \we use it? Main points: more than a Hardware Abstraction Layer; decouples hardware platforms, peripherals, libraries. While it adds an initial development overhead, it helps a lot with porting the firmware to other boards, sensors, or even software communication schemes.}
 
 \subsubsection{Serial communication with host}
 
@@ -191,7 +432,7 @@ In order to send data to the attached computer or carrier board, the de facto so
 
 De facto, most microcontroller development boards, including the MAX78000FTHR, MAX-Arduino, and the more common ATMEGA368P "Arduino-like" boards provide UART-USB translation via a dedicated IC, abstracting away the complexities of the USB communication stack.
 
-UART modules have varying degrees of configurability of the baud rate, flow control, and framing. For most practical uses, though, including this project, one may just specify the baud rate, defaulting to 8N1 (8 data bits, no parity bit, 1 start bit, 1 stop bit) framing and no flow control. Typical baud rates include 9600 baud, a legacy of 20th century POTS modems (introduced by the V.32 ITU-T standard \cite) and 115200 baud, common both in last-century modem systems, but also recently popularized by its default use in the Arduino development environment.
+UART modules have varying degrees of configurability of the baud rate, flow control, and framing. For most practical uses, though, including this project, one may just specify the baud rate, defaulting to 8N1 (8 data bits, no parity bit, 1 start bit, 1 stop bit) framing and no flow control. Typical baud rates include 9600 baud, a legacy of 20th century POTS modems (introduced by the V.32 ITU-T standard \cite{}) and 115200 baud, common both in last-century modem systems, but also recently popularized by its default use in the Arduino development environment.
 
 To achieve the required bandwidth for this project, a suitable baud rate must be chosen. Given the sample rate $f_s$, number of channels $N$, and number of bytes per channel sample $d$, and 8N1 framing (giving $10\text{ baud}/\text{byte}$), the baud rate $f_{baud}$ must be:
 
@@ -203,9 +444,9 @@ Additionally, choosing a baud rate larger than this minimum will allow for less 
 
 Baud rate selection is not universal across devices and the firmware for each hardware platform must choose a rate that is both compatible with the hardware and that satisfies relation \ref{eq:baud}. In the case of the MAX78000FTHR, a rate of exactly $491520\text{ baud}$ can be achievend by using the IBRO (Internal Baud Rate Oscillator) of $7.3728\text{MHz}$ with a clock divider of $15$, but [we] will use a divider of $9$ for a "round" value of $819200\text{ baud}$ to have a good margin of error and not need such strict synchronization between the UART module and the rest of the program.
 
-\subsubsection{SPI Communication basic proof of concept (2024-06 single channel demo)}
+\subsubsection{SPI Communication basic proof of concept (2024-05 single channel demo)}
 
-For initial validation of the concept on the AD4114, I wrote a basic \todo{write about the PoC}
+For initial validation of the concept on the AD4114, \todo{write about the PoC: 1 channel, no amplification, full sample rate, can see both EMG and ECG on it. can do nice graphs, can diagnose my RBBB}
 
 \subsubsection{No-OS Driver}
 
@@ -231,13 +472,13 @@ With this general issue in mind, IIO defines triggers as software or hardware ev
 
 With the AD4114 in continuous conversion mode, two trigger sources are apparent: using the \drdy\ behaviour in continuous conversion mode (as described in \ref{label:drdy}) or using a timer to poll the AD4114 at least as fast as the conversion rate. While the first option is more elegant and wouldn't do any unnecessary polling, it requires nonstandard operation of the SPI protocol by keeping CS active and monitoring the MISO (\drdy) line, which isn't generally possible unless \we bitbang the SPI protocol or have access to more configurable IO options like on FPGA platforms or the Programmable Input and Output subsystem of RP2040 fame (\cite{Smith2021}). The second option of setting up a timer interrupt which polls the AD4114 status register to check if a new conversion result is available
 
-\todo{scrie coaie mai mult}
+\todo{more :)}
 
 \subsubsection{ROS2 on network-capable microcontrollers}
 
 In recent years, there has been a wave of developments in fast, network-capable, cheap microcontroller platforms, leading to products such as the Espressif ESP8266 and ESP32, or the Raspberry Pi Pico-W, which are capable of running ROS2 nodes all by themselves. 
 
-\todo{scrie coaie mai mult}
+\todo{more :)}
 
 \subsubsection{Digital filtering of the signal}
 
@@ -263,8 +504,7 @@ H(z) = \frac{1}{1 + \beta} \cdot \frac{1 - z^{-N}}{1-az^{-N}}
 
 \subsubsection{ROS2 agent for non network-capable microcontrollers}
 
-In the case of microcontroller platforms that aren't network capable, such as the ATMEGA328P family popularized by Arduino, the MAX78000FTHR, the device itself won't have a means of directly connecting to the ROS2 network as a node. As such, it needs to pass along the data to another device that can. Two implementation variants are immediately evident:
-- Using the micro-ROS framework, letting ros logic take over the serial device instead of having it communicate using the IIO protocol, and running a ROS-micro agent on the host
+In the case of microcontroller platforms that aren't network capable, including the MAX78000FTHR, the device itself won't have a means of directly connecting to the ROS2 network as a node. As such, it needs to pass along the data to another device that can. Two implementation variants are immediately evident: Using the micro-ROS framework, letting ros logic take over the serial device instead of having it communicate using the IIO protocol, and running a ROS-micro agent on the host
 - Using the ros-control framework and an IIO-ROS2 adapter on the host / carrier board.
 
 Of which I chose the second because it doesn't require reconfiguring the serial port and allows for simultaneous use of ROS and IIO.
@@ -293,26 +533,28 @@ Using a waveform generator, we can compare this device's measurements with both:
 - Precision oscilloscope readings
 - Another biopotential DAQ system (Tassos')
 
-\todo{scrie coaie mai mult :)}
+\todo{more :) :)}
 
 \subsection{Usage for EMG}
 
-\todo{scrie coaie mai mult :)}
+\todo{more :) :)}
 
 \subsection{Usage for ECG}
 
-\todo{scrie coaie mai mult :)}
+\todo{more :) :)}
 
-\subsection{Usage for EEG}
+\subsection*{Usage for EEG???}
 
-\todo{maybe try out a quick and dirty N100 demo? orthogonal PRBS activation of multiple visible targets, correlate EEG (single ended frontal, occipital) and determine which target the user is focusing on}
-
-\todo{scrie coaie mai mult :)}
+\todo{This would just be a cherry on top if I really don't have anything left to do in the last few days. A cool experiment would be trying out a quick and dirty \href{https://en.wikipedia.org/wiki/N100}{N100} demo. Could have a handful of visible targets on the screen, have some orthogonal and time-uncorrelated activations for each, correlate EEG (single ended frontal-occipital) with each of the PRBS to determine which target the user is focusing on}
 
 \newpage
 \section{Conclusion}
 
+We present a hardware + software solution for biopotential measurements of up to 16 single-ended or 8 differential channels, with \todo{specs}, intended for easy and affordable maintainability, using off-the-shelf components and open source hardware and software, and being fit for 
+
 \subsection{Future work}
+
+Among initial ambitions which unfortunately 
 
 \newpage
 \section{Acknowledgements}
