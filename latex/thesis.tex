@@ -146,11 +146,25 @@ We present overview of the information flow, from the biological signals to the 
 
 As part of normal function, all biological cells have a difference of electrical potential between their interior and their exterior, called the \textit{membrane potential}. In the steady state, the \textit{resting membrane potential} of both skeletal muscle cells and that of cardiomyocytes (cardiac muscle cells) is in the $\numrange{-70}{-90} \mV$ range \cite{Hopkins2006,Klabunde2011-jo}.
 
+\subsubsection{Skeletal muscles: sEMG}
 
+From an electrophysiological standpoint, skeletal muscles are comprised of a number of motor units (MU), each corresponding to an individual axon that innervates a number of muscle fibers. Neural impulses travel from the central nervous system via nerves to a motor unit's innervation zone (IZ), where a number of neuromuscular junction synapses trigger an action potential in the fibers of that motor unit. The electrical activation of the muscle doesn't take place all across the fiber simulataneously, but rather travels from the innervation zone towards the tendons as an impulse.
 
-\todo{WIP: skeletal muscles, Sarcomere, sliding filament model, essential parts from \cite{Barbero2012}}
+This starts out as an action potential (AP) at the innervation zone, wherein the span of 4-6ms, the membrane potential rises from the resting $-70 \mV$ to positive (depolarisation) and then back to the resting potential (repolarisation) by biomolecular mechanisms involving the flow of $\text{Na}^+$, $\text{K}^+$ and $\text{Cl}^-$ ions. This localized action potential also triggers action potential in neighbouring parts of the muscle cell, leading to a chain reaction down the muscle fiber with a clear external electrical manifestation: the Motor Unit Action Potential as a traveling impulse of ion flow, which is measurable via the potential fluctuations across tissue.
 
-\todo{ECG: find a reputable source to cite for cardio physiology}
+Furthermore, two modes of measurement of MUAP arise: \textit{unipolar} measurements referred to a common potential and \textit{bipolar} measurements where consecutive electrodes' potentials are taken into differential amplifiers. \todo{FIGURE}
+
+Muscle fiber contractions follow the "all or nothing" principle, meaning a fiber either contracts fully or not at all. To modulate the force excerted by a muscle, only a part of the available motor units are recruited. Still, there is an independence between the number of motor units, number of fibers, and a muscle's strength, the motor unit count only improving the "resolution" of muscle control. By Henneman's size principle \cite{Henneman1957}, low effort contractions start by recruiting smaller motor units and gradually activate larger motor units as load increases. Besides this spatial control, muscular contraction is also controlled via rate coding, where the same motor unit is reactivated repeatedly, with the activation frequency positively correlating with the overall contraction strength, until fatigue is reached \cite{DeLuca1985}.
+
+As a practical result, during low effort motion where only one or a handful of motor units are engaged, the MUAP is very easily identifiable in the measured waveform. On the other hand, high effort contractions will manifest a superposition of uncorrelated MUAPs which are difficult to separate from just sEMG measurements. \todo{FIGURE from own measurements}
+
+\subsubsection{Cardiac muscles: ECG}
+
+While the internal mechanisms of muscle contractions are similar between cardiac and skeletal muscle, their external activation strategies vary almost entirely. Cardiac muscle isn't divided into motor units and as such heartbeat strength cannot be modulated by recruitment, but rather by various chemical and mechanical factors that ultimately increase or decrease the availability of $\text{Ca}^{2+}$ ions, such as but not limited to: the Frank-Starling mechanism (which aids in stroke volume regulation), or hormone effects from secretion of adrenaline or norepinephrine.
+
+Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. \todo{FIGURE} Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
+
+Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. \todo{FIGURE illustrating a directional measurement}
 
 \subsection{Market research and literature review}
 
@@ -171,13 +185,13 @@ What we're doing, but better, but a PhD thesis.
 
 \subsection*{Quanser QNET Myoelectric board}
 
-
+Anecdotally, this is the board that sparked the idea for this project, being one of the experimental boards given to TUCN students. The Quanser QNET Myoelectric trainer board is a closed-source, one channel addon board for the National Instruments Elvis II. It provides a fixed amplification stage of ?gain? powered by a battery to remove power supply noise, and further uses the ELVIS' oscilloscope channel for analog to digital conversion. 
 
 Depends on NI Elvis; one channel; not open \todo{more :)}
 
 \subsection*{BioWare EXG Pills}
 
-Just the amplification part, no DAQ, rely on an arduino's ADC or some other. \todo{more :)}
+As one of the cheapest options, the EXG Pill is an open source instrumentation amplifier board meant to aid in biopotential data acquisition by connecting it to another device with an ADC, typically an Arduino board. It is available for order on the creator's online shop, but being an open hardware project allows anyone to manufacture their own, to specification.
 
 \subsection*{Cometa Pico EMG}
 
@@ -196,7 +210,7 @@ not open, expensive\todo{more :)}
 
 \subsection{Noise sources}
 
-The superposition of electrical signals measurable by biopotential DAQs contains a complicated mix of noise coming from various physiological and other external factors, besides the signal of interest. Additionally, the measurement circuitry compounds noise at every step. Modeling some of the main noise components of the entire signal chain is essential for its design.
+The superposition of electrical signals measurable by biopotential DAQs contains a complicated mix of noise coming from various physiological and other external factors, besides the signal of interest. Additionally, the measurement circuitry compounds noise at every step. Modeling some of the main noise components of the entirawe signal chain is essential for its design and proper specification.
 
 Some of the studied noise sources are \textit{intrinsic} to the process and impossible to remove, such as thermal noise and the amplifier and ADC noise profiles. Others are not intrinsic, depend on the setup, and can be compensated for, such as mains hum.
 
@@ -230,17 +244,31 @@ The drawback of having very large gain is the limit it incurs on the measurable 
 
 Besides the unavoidable thermal and electronics noise, further disturbances in ECG measurements can be classified, as per \cite{Chatterjee2020}, into: low frequency ($< 0.5\Hz$) baseline wander caused by body motion and electrode contact issues, power-line artifacts ($50/60\Hz$ and their harmonics) caused by insufficient power supply decoupling when the measurement device is connected to mains power, and muscle artifacts (EMG signals). Of the three, the first two are relevant and undesireable in any biopotential measurement, while the latter is obviously the signal of interest in EMG applications.
 
-From a signal processing standpoint, a simple solution for low frequency wander and power line artifacts is using a DC blocking comb filter.
+From a signal processing standpoint, a simple solution for low frequency wander and power line artifacts is using a DC blocking comb filter, but these can also be addressed in the hardware design, especially when it comes to power supply decoupling.
 
 \subsection{Signal chain design}
 
-\todo{figure out which parts go in the background section and which go to the design section. Currently put everything in the design section.}
+With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. As such, intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcomigng parasitic effects and signal chain noise before reaching the ADC.
+
+\subsubsection{Noise and gain in cascaded signal processing structures}
+
+
 
 \subsubsection{Instrumentation amplifiers}
 
+Instrumentation amplifiers are a class of differential amplifier which boast high open-loop gain, low noise, and high input impedance. The typical textbook realization is with 3 operational amplifiers connected like in figure \ref{fig:inamp}, which allow the gain to be adjusted by choosing the value of resistor $R_G$. Their high input impedance means that very little current is needed to affect the inputs, helping with the issue of high electrode and tissue impedance. Their high power supply rejection ratio (PSRR) and common mode rejection ratio (CMRR) make them even more suitable for differential electrode applications, requiring very little extra circuitry.
+
+\begin{thesisfigure}{Typical implementation of an instrumentation amplifier}{inamp}
+
+\end{thesisfigure}
+
 \subsubsection{Multiplexed ADCs}
 
-\subsubsection{?}
+
+
+\subsubsection{EMI prevention over long wires}
+
+When dealing with long wires and weak signals, electromagnetic interference (EMI) is a significant source of noise which is produced by virtually all electronic devices around. To combat this, common techniques are using twisted pairs and wire shielding. For simplicity, we will try to shorten the wires carrying weak signals as much as possible and only use strongly driven and high amplitude signals over long wires. The result is that in bipolar measurements, we place the differential amplifier as close as possible to the electrodes, and then don't care about signal degradation between the amplifier and ADC thanks to the strongly driven nature of that signal.
 
 \newpage
 \section{Analysis, design and implementation}
