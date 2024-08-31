@@ -2,7 +2,9 @@
 
 \usepackage{siunitx}
 \usepackage{tikz}
-\usetikzlibrary {positioning,fit,calc}
+\usepackage{circuitikz}
+\usepackage{pgfplots}
+\usetikzlibrary {positioning,fit,calc,shapes.geometric}
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
@@ -25,6 +27,7 @@
 \newcommand{\ohm}{\unit{\ohm}}
 \newcommand{\kohm}{\unit{\kilo\ohm}}
 \newcommand{\dB}{\unit{\deci\bel}}
+\newcommand{\uF}{\unit{\micro\farad}}
 
 % Signal names
 \newcommand{\drdy}{{\ensuremath{\mathtt{DOUT/}\overline{\mathtt{RDY}}}}}
@@ -152,7 +155,78 @@ From an electrophysiological standpoint, skeletal muscles are comprised of a num
 
 This starts out as an action potential (AP) at the innervation zone, wherein the span of 4-6ms, the membrane potential rises from the resting $-70 \mV$ to positive (depolarisation) and then back to the resting potential (repolarisation) by biomolecular mechanisms involving the flow of $\text{Na}^+$, $\text{K}^+$ and $\text{Cl}^-$ ions. This localized action potential also triggers action potential in neighbouring parts of the muscle cell, leading to a chain reaction down the muscle fiber with a clear external electrical manifestation: the Motor Unit Action Potential as a traveling impulse of ion flow, which is measurable via the potential fluctuations across tissue.
 
-Furthermore, two modes of measurement of MUAP arise: \textit{unipolar} measurements referred to a common potential and \textit{bipolar} measurements where consecutive electrodes' potentials are taken into differential amplifiers. \todo{FIGURE}
+Furthermore, two modes of measurement of MUAP arise: \textit{unipolar} measurements referred to a common potential and \textit{bipolar} measurements where consecutive electrodes' potentials are taken into differential amplifiers, as illustrated in figure \ref{fig:unibipolar}.
+
+\begin{thesisfigure}{Unipolar (left) and bipolar (right) measurements with 4 electrodes}{unibipolar}
+\resizebox{0.8\textwidth}{!}{%
+\begin{circuitikz}
+\tikzstyle{every node}=[font=\Large]
+\draw (6.25,19) to[short, -o] (5,19) ;
+\draw [](6.25,16.5) to[short, -o] (5,16.5) ;
+\draw (9,18.5) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (7.5,19);
+\draw  (opamp2.-) to[short] (7.5,18);
+\draw (10.2,18.5) to[short](10.5,18.5);
+\draw (9,16) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (7.5,16.5);
+\draw  (opamp2.-) to[short] (7.5,15.5);
+\draw (10.2,16) to[short](10.5,16);
+\draw (9,13.5) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (7.5,14);
+\draw  (opamp2.-) to[short] (7.5,13);
+\draw (10.2,13.5) to[short](10.5,13.5);
+\draw [](6.25,14) to[short, -o] (5,14) ;
+\draw [](6.25,11.5) to[short, -o] (5,11.5) ;
+\draw [](6.25,11.5) to[short] (7,11.5);
+\draw [](7,11.5) to[short] (7,18);
+\draw [](7,18) to[short] (7.5,18);
+\draw [](7,15.5) to[short] (7.5,15.5);
+\draw [](7,13) to[short] (7.5,13);
+\node at (7,13) [circ] {};
+\node at (7,15.5) [circ] {};
+\draw [](6.25,19) to[short] (7.5,19);
+\draw [](6.25,16.5) to[short] (7.5,16.5);
+\draw [](6.25,14) to[short] (7.5,14);
+\node [font=\LARGE] at (5,14.5) {$V_3$};
+\node [font=\LARGE] at (5,17) {$V_2$};
+\node [font=\LARGE] at (5,19.5) {$V_1$};
+\node [font=\LARGE] at (5,12) {$V_{REF}$};
+
+\draw [](15,19) to[short, -o] (13.75,19) ;
+\draw [](15,16.5) to[short, -o] (13.75,16.5) ;
+\draw (17.75,18.5) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (16.25,19);
+\draw  (opamp2.-) to[short] (16.25,18);
+\draw (18.95,18.5) to[short](19.25,18.5);
+\draw (17.75,16) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (16.25,16.5);
+\draw  (opamp2.-) to[short] (16.25,15.5);
+\draw (18.95,16) to[short](19.25,16);
+\draw (17.75,13.5) node[op amp,scale=1, yscale=-1 ] (opamp2) {};
+\draw (opamp2.+) to[short] (16.25,14);
+\draw  (opamp2.-) to[short] (16.25,13);
+\draw (18.95,13.5) to[short](19.25,13.5);
+\draw [](15,14) to[short, -o] (13.75,14) ;
+\draw [](15.75,18) to[short] (16.25,18);
+\draw [](15.75,15.5) to[short] (16.25,15.5);
+\draw [](15.75,13) to[short] (16.25,13);
+\draw [](15,19) to[short] (16.25,19);
+\node [font=\LARGE] at (13.75,14.5) {$V_3$};
+\node [font=\LARGE] at (13.75,17) {$V_2$};
+\node [font=\LARGE] at (13.75,19.5) {$V_1$};
+\draw [](15,16.5) to[short] (16.25,16.5);
+\draw [](15.75,18) to[short] (15.75,16.5);
+\draw [](15,14) to[short] (16.25,14);
+\draw [](15.75,15.5) to[short] (15.75,14);
+\draw [](15.75,13) to[short] (15.75,11.5);
+\node at (15.75,14) [circ] {};
+\node at (15.75,16.5) [circ] {};
+\draw [](15,11.5) to[short, -o] (13.75,11.5) ;
+\draw [](15,11.5) to[short] (15.75,11.5);
+\node [font=\LARGE] at (13.75,12) {$V_4$};
+\end{circuitikz}
+}
+\end{thesisfigure}
 
 Muscle fiber contractions follow the "all or nothing" principle, meaning a fiber either contracts fully or not at all. To modulate the force excerted by a muscle, only a part of the available motor units are recruited. Still, there is an independence between the number of motor units, number of fibers, and a muscle's strength, the motor unit count only improving the "resolution" of muscle control. By Henneman's size principle \cite{Henneman1957}, low effort contractions start by recruiting smaller motor units and gradually activate larger motor units as load increases. Besides this spatial control, muscular contraction is also controlled via rate coding, where the same motor unit is reactivated repeatedly, with the activation frequency positively correlating with the overall contraction strength, until fatigue is reached \cite{DeLuca1985}.
 
@@ -165,6 +239,10 @@ While the internal mechanisms of muscle contractions are similar between cardiac
 Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. \todo{FIGURE} Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
 
 Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. \todo{FIGURE illustrating a directional measurement}
+
+\subsubsection{Biopotential measurement modes}
+
+
 
 \subsection{Market research and literature review}
 
@@ -226,11 +304,58 @@ For a rough estimate of the order of magnitude of thermal noise in our biopotent
 
 Which can alternatively be interpreted as having an RMS noise of $\sqrt{0.02977 \uV^2} \approx 172.5 \nV$ or a noise density of $\sqrt{4k_BTR} = 7.716 \nV/\sqrt{\Hz}$. 
 
-\subsubsection{Amplifier and ADC noise}
+\subsubsection{Amplifier and ADC noise} \label{ampandadcnoise}
 
-Both ADCs and amplifier circuits have specified noise figures which pose design tradeoffs. In ADCs, the noise is specified as additive noise at the input $V_{na}$, such that a measurement $V_{meas}$ of a "real" voltage $V$ will be $V_{meas} = V + V_{na}$. Amplifiers are characterized by both input noise $V_{ni}$ created by the input stage, as well as output noise $V_{no}$ created by internal circuirty and the output stage. The output of an amplifier with gain $G$ is $V_{amp} = (V + V_{ni}) \cdot G + V_{no}$. As an easier to use figure, the \textit{Input Referred Noise} is the equivalent disturbance at the input that would create both the effects of input and output noise componded. $\text{IRN} = V_{ni} + V_{no}/G$ such that we can simplify to $V_{amp} = (V + \text{IRN}) \cdot G$.
+Both ADCs and amplifier circuits have specified noise figures which pose design tradeoffs. In ADCs, the noise is specified as additive noise at the input $V_{na}$, such that a measurement $V_{meas}$ of a "real" voltage $V$ will be $V_{meas} = V + V_{na}$. Amplifiers are characterized by both input noise $V_{ni}$ created by the input stage, as well as output noise $V_{no}$ created by internal circuirty and the output stage. The output of an amplifier with gain $G$ is $V_{amp} = (V + V_{ni}) \cdot G + V_{no}$. As an easier to use figure, the \textit{Input Referred Noise} is the equivalent disturbance at the input that would create both the effects of input and output noise componded. $V_n = V_{ni} + V_{no}/G$ such that we can simplify to $V_{amp} = (V + V_n) \cdot G$. An equivalent block diagram is presented in figure \ref{fig:ampadcchain}.
 
-This raises one of the most important design decisions of the signal chain, namely deciding on the amplification structure before the ADC. Using no amplifier at all is the most economic and also avoids $V_{ni}$ and $V_{no}$, but in the case of very small input signals, they are left to be dominated by ADC noise $V_{na}$. Adding an amplifier with unity gain only compounds amplifier noise and is as such detrimental, but further increasing the gain increases the signal-to-noise ratio (SNR):
+\begin{thesisfigure}{Block diagram of amplifier and ADC signal chain, with modelled noise}{ampadcchain}
+
+\begin{tikzpicture}[node distance=1.5cm]
+    \node [] (V) {$V$};
+    \node [] (s1) [right of=V] {$\oplus$};
+    \node [] (Vni) [above of=s1] {$V_{ni}$};
+    \node [draw,isosceles triangle] (G) [right of=s1] {$G$};
+    \node [] (s2) [right of=G,node distance=2cm] {$\oplus$};
+    \node [] (Vno) [above of=s2] {$V_{no}$};
+    \node [] (Vamp) [right of=s2] {$V_{amp}$};
+    \node [] (s3) [right of=Vamp] {$\oplus$};
+    \node [] (Vna) [above of=s3] {$V_{na}$};
+    \node [draw] (ADC) [right of=s3] {ADC};
+    \node [] (Vmeas) [right of=ADC,node distance=2cm] {$V_{meas}$};
+
+    \path[draw,->]
+        (V) edge (s1)
+        (s1) edge (G)
+        (G) edge (s2)
+        (s2) edge[-] (Vamp)
+        (Vamp) edge (s3)
+        (s3) edge (ADC)
+        (ADC) edge (Vmeas)
+        (Vni) edge (s1)
+        (Vno) edge (s2)
+        (Vna) edge (s3);
+\end{tikzpicture}
+
+\rotatebox[origin=c]{90}{\Large$\approx$}
+
+\begin{tikzpicture}[node distance=1.5cm]
+    \node [] (V) {$V$};
+    \node [] (s1) [right of=V] {$\oplus$};
+    \node [] (Vn) [above of=s1] {$V_n$ ("IRN")};
+    \node [draw,isosceles triangle] (G) [right of=s1] {$G$};
+    \node [draw] (ADC) [right of=G,node distance=2cm] {ADC};
+    \node [] (Vmeas) [right of=ADC,node distance=2cm] {$V_{meas}$};
+
+    \path[draw,->]
+        (V) edge (s1)
+        (s1) edge (G)
+        (G) edge (ADC)
+        (ADC) edge (Vmeas)
+        (Vn) edge (s1);
+\end{tikzpicture}
+\end{thesisfigure}
+
+This raises one of the most important design decisions of the signal chain, namely deciding on the amplification structure before the ADC. Using no amplifier at all is the most economic and also avoids $V_{ni}$ and $V_{no}$, but in the case of very small input signals, they are left to be dominated by ADC noise $V_{na}$. Adding an amplifier with unity gain only compounds amplifier noise and is as such detrimental, but further increasing the gain leads to better signal-to-noise ratio (SNR):
 
 \begin{thesisequation}{snr}
 \text{SNR} = \frac{\text{"signal"}}{\text{"noise"}} = \frac{G\cdot V}{G\cdot V_{ni} + V_{no} + V_{na}} = \frac{V}{V_{ni} + (V_{no} + V_{na}) / G} \longrightarrow \frac{V}{V_{ni}}
@@ -239,6 +364,19 @@ This raises one of the most important design decisions of the signal chain, name
 Thus, given an amplifier with known $V_{ni}$ we can compute the best-case noise figure assuming "infinite" gain. The rationally convergent nature of the above expression inevitably creates a situation of diminishing returns, wherein increasing the gain will always increase the signal quality, but even relatively small gains achieve practically ideal performance.
 
 The drawback of having very large gain is the limit it incurs on the measurable range of input voltages. Any analog circuit can only handle a limited interval of voltages, which when exceeded leads to unreliable measurements, with the possibility of permanent damage to the equipment. If the ADC is limited to measuring $\pm V_{max}$, the measurable signals are implicitly limited to $\pm V_{max}/G$.
+
+
+In this topology consisting of a single amplifier stage characterized by $V_{ni}$ and $V_{no}$, followed by an ADC with input noise $V_{na}$, measuring the "true" voltage $V$, the resulting digitized sample $V_{meas}$ can be decomposed into:
+
+\begin{thesisequation}{decomposey}
+V_{meas} = GV + GV_{ni} + V_{no} + V_{na}
+\end{thesisequation}
+
+Which can be rearranged to obtain an expression for RMS total noise $V_n$:
+
+\begin{thesisequation}{rmsnoise}
+\overline{V^2} = \frac{\overline{V_{meas}^2}}{G^2} + \underbrace{\left(\overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2}\right)}_{\overline{V_n^2}}
+\end{thesisequation}
 
 \subsubsection{ECG noise models}
 
@@ -269,6 +407,10 @@ Instrumentation amplifiers are a class of differential amplifier which boast hig
 \subsubsection{EMI prevention over long wires}
 
 When dealing with long wires and weak signals, electromagnetic interference (EMI) is a significant source of noise which is produced by virtually all electronic devices around. To combat this, common techniques are using twisted pairs and wire shielding. For simplicity, we will try to shorten the wires carrying weak signals as much as possible and only use strongly driven and high amplitude signals over long wires. The result is that in bipolar measurements, we place the differential amplifier as close as possible to the electrodes, and then don't care about signal degradation between the amplifier and ADC thanks to the strongly driven nature of that signal.
+
+\subsubsection{Common collector voltage buffer}
+
+Later used in both the preamplifier and Driven Right Leg circuits, the common collector amplifier, illustrated in figure ?? is a minimal and cheap circuit for providing a low impedance, high drive strength "mirror" of an incoming signal with potentially higher impedance.
 
 \newpage
 \section{Analysis, design and implementation}
@@ -353,7 +495,7 @@ Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherw
 
 \subsubsection{Amplification stage}
 
-The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to $\Delta v \approx 1.49\uV$ if using the internal $2.5\V$ reference. At $f_s=1007\Hz$ and $f_s=6211\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$ and $\overline{V_{na,6211}^2}=74\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs:
+The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to $\text{LSB} = V_{REF} / (2^N \cdot 0.1)$. Using the internal $2.5\V$ reference, $\text{LSB} \approx 1.49\uV$. The noise level varies depending on the sample rate. At the wanted $f_s=1007\Hz$ and maximum $f_s=6211\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$ and $\overline{V_{na,6211}^2}=74\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs (assuming a $1\mV$ signal):
 
 \begin{thesisequation}{SNR_no_amp}
 \begin{aligned}
@@ -363,28 +505,34 @@ The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to $\D
 \end{aligned}
 \end{thesisequation}
 
-We choose the AD8226 \cite{AD8226} instrumentation amplifier for the preamp stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth $\Delta f=500\Hz$ is:
+We choose the AD8226 \cite{AD8226} instrumentation amplifier for the preamp stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth of $\Delta f=500\Hz$ is:
 
 \begin{thesisequation}{8266_noise}
 \begin{aligned}
-V_{ni,RMS} = \sqrt{500\Hz \cdot (22\nV/\sqrt{\Hz})^2} = 0.492\uV \\
-V_{no,RMS} = \sqrt{500\Hz \cdot (120\nV/\sqrt{\Hz})^2} = 2.683\uV
+\sqrt{\overline{V_{ni}^2}} = \sqrt{500\Hz \cdot (22\nV/\sqrt{\Hz})^2} = 0.492\uV \\
+\sqrt{\overline{V_{no}^2}} = \sqrt{500\Hz \cdot (120\nV/\sqrt{\Hz})^2} = 2.683\uV
 \end{aligned}
 \end{thesisequation}
 
-With the preamp stage added before the ADC, the total noise of a sample and the theoretical SNR ($1\mV$ input) are:
+With the preamp stage added before the ADC, the total noise of a sample and the theoretical SNR are:
 
 \begin{thesisequation}{noise_amp}
 \begin{aligned}
-\overline{V_n^2} = \overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2} \\
-\text{SNR}_{(\dB)} = 10\log_{10}\left(\frac{(1\mV)^2}{\overline{V_{n}^2}}\right)
+\text{SNR}_{(\dB)} &= 10\log_{10}\left(\frac{(1\mV)^2}{\overline{V_{n}^2}}\right) \\
+(\ref{eq:rmsnoise}) \Rightarrow \text{SNR}_{(\dB)} &= 10\log_{10}\left(\frac{(1\mV)^2\cdot G^2}{\overline{V_{ni}^2}\cdot G^2 + \overline{V_{no}^2} + \overline{V_{na}^2}}\right)
 \end{aligned}
 \end{thesisequation}
 
-An illustrative handful of values for various gain settings: \todo{rephrase :)}
+As described in section \ref{ampandadcnoise}, increasing the gain will increase SNR but with diminishing returns, and it will limit the available measurement range. With the specified values for the AD8226, we compute a handful of gain scenarios (table \ref{tab:gains}) and choose $G\approx 20$ as a fair middleground between good SNR and good input range. For this, we use the part's gain formula to compute a suitable gain resistor:
 
-\begin{thesistable}{0.33}{l|ll}{a}{b}
-Gain & Full scale & $\text{SNR}_{(\dB)}$ \\ \hline
+\begin{thesisequation}{}
+R_G = \frac{49.4\kohm}{G-1} = \frac{49.4\kohm}{20-1} \approx 2600\ohm
+\end{thesisequation}
+
+The closest E6-series value is $R_G = 2200\ohm$ which would give a gain of $G\approx 22.45 \approx +27\dB$.
+
+\begin{thesistable}{0.4}{l|ll}{Full scale, SNR for various gains}{gains}
+Gain & Approx. full scale & $\text{SNR}$ \\ \hline
 1    & $5\V$      & $34\dB$ \\
 2    & $2.5\V$    &  $40\dB$ \\
 5    & $1\V$      &  $48\dB$ \\
@@ -395,55 +543,80 @@ Gain & Full scale & $\text{SNR}_{(\dB)}$ \\ \hline
 1000 & $5\mV$     &  $66\dB$ \\
 \end{thesistable}
 
+Using an active element (the instrumentation amplifier) also gives us the opportunity to do some hardware filtering. To combat high frequency noise, we choose to add a first order RC low-pass filter with a cutoff of $f_c \approx 500\Hz$. Our implementation uses $R=330\ohm$ and $C=1\uF$ for a theoretical $3\dB$ cutoff frequency of:
+
+$$f_c = \frac{1}{2\pi \cdot 330\ohm \cdot 1\uF} = 482.28\Hz$$
+
+To encode the bipolar differential measurement as a unipolar signal, we bias the amplifier's output voltage using the AD8226's $V_{REF}$ input. As specified, this pin must be driven with less than $2\ohm$ impedance, so just a simple resistor divider wouldn't suffice. We use a common-collector voltage buffer after a $10\kohm - 10\kohm$ divider to amplify the drive strength, biasing the output to approximately $V_{REF} \approx 5\V / 2 - 0.7\V = 1.8V$.
+
+To help with transient power supply fluctuations, the instrumentation amplifier's positive supply is also decoupled with a $0.1\uF$ capacitor.
+
+The overall circuit diagram and a picture of the built amplifier board are presented in figure \ref{fig:ampboard}.
+
+We validate this preamplifier board with two tests using the ADALM2000 platform. It powers the board, generates test signals, and measures the amplified output.
+
+For the first test, a sinusoidal $A_{test} = 50\mV$ peak-peak test signal is applied. The measured waveform displays the expected DC bias of $\overbar{V_{amp}}=1.88\V$, and an amplitude of $A_{amp}=1.23\V$ peak-peak, giving an effective gain of $G = A_{amp} / A_{test} = 24.6$, just within the $10\%$ tolerance of the designed $G=22.45$ imposed by the passive components we used. For these amplitudes, the harmonic distortion and amplifier noise are below the $-80\dB\text{FS}$ noise floor of the ADALM2000.
+
+Secondly, we test the frequency response using the Network analyzer feature of the Scopy software\cite{scopy}. A $10\Hz - 10\kHz$ sine sweep is generated, plugged into the amplifier, and the resulting output is measured, determining both the magnitude and phase relation, which are plotted in figure \ref{fig:preampbode}. Both the measured magnitude and phase characteristics match the ideal ones well enough, especially given the $10\%$ tolerances of the passives, successfully validating the performance of this part of the signal chain.
 
 
+\begin{thesisfigure}{Circuit diagram and photo of built amplifier board}{ampboard}
 
+\includegraphics[width=0.6\linewidth]{ampboard_schematic.png}\\
+\includegraphics[width=0.6\linewidth]{ampboard_photo.jpg}
 
+\end{thesisfigure}
 
+\begin{thesisfigure}{Preamplifier board frequency response, measured and ideal $500\Hz$ first order LPF}{preampbode}
+\begin{tikzpicture}
 
-- adc has 24 bits of resolution => ? uV LSB => would seem like it's already suitable for our measurement ranges. Compute number of bits and SNR given a known ECG, EMG amplitude.
-- but we can do better! A pre-amp stage will amplify the signal, add some noise, but ultimately reduce the IRN.
-- can't amplify too much, though, because we don't want to exceed the full scale (or really the 0-5V supply for that matter)
-- set a hard limit for the gain so we don't clip
-- compute bits / SNR for some gain values (as well as for no amplifier)
-- plot or table showing diminishing returns. Just stop when we're <0.5-1 bits from the best we can do (gain=1000)
+\begin{semilogxaxis}[
+        width=14cm, height=6cm,
+        xmin=10, xmax=10000,
+        ylabel={Magnitude [dB]},
+        grid=both,
+        legend pos=south west,
+        extra x ticks={500},
+        extra x tick label={500}
+    ]
+    \addplot[color=black, thick] table[x index=0, y index=3] {../data/preampbode.dat};
+    \addlegendentry{Measured}
 
-\todo{tikz figure of signal chain}
+    \addplot[color=cyan, thick, dashed] table[x index=0, y index=1] {../data/preampbode.dat};
+    \addlegendentry{Ideal}
+\end{semilogxaxis}
 
-Assuming a single , followed by an ADC input noise $V_{na}$, are measuring the "true" voltage $x$, the resulting digitized sample $y$ can be decomposed into:
+\end{tikzpicture}
+\begin{tikzpicture}
 
-\begin{thesisequation}{decomposey}
-y = Gx + GV_{ni} + V_{no} + V_{na}
-\end{thesisequation}
+\begin{semilogxaxis}[
+        width=14cm, height=6cm,
+        xlabel={Frequency [Hz]}, xmin=10, xmax=10000,
+        ylabel={Phase [deg]}, ymin=-90, ymax=0,
+        grid=both,
+        legend pos=south west,
+        extra x ticks={500},
+        extra x tick label={500},
+        ytick={0, -20, -45, -70, -90}
+    ]
+    \addplot[color=black, thick] table[x index=0, y index=4] {../data/preampbode.dat};
+    \addlegendentry{Measured}
 
-Which can be rearranged to obtain an expression for RMS total noise $V_n^2$:
+    \addplot[color=cyan, thick, dashed] table[x index=0, y index=2] {../data/preampbode.dat};
+    \addlegendentry{Ideal}
 
-\begin{thesisequation}{rmsnoise}
-\overline{x^2} = \frac{\overline{y^2}}{G^2} + \underbrace{\left(\overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2}\right)}_{\overline{V_n^2}}
-\end{thesisequation}
-
-
-
-
-
-
+    % Add a specific point with a label
+    \addplot[color=black, mark=*, mark size=3] coordinates {(500, -45)};
+    \node at (axis cs:500,-45) [anchor=south west] {$-45^\circ\text{ at }500\Hz$};
+\end{semilogxaxis}
+\end{tikzpicture}
+\end{thesisfigure}
 
 \subsubsection{Microcontroller}
 
-The chosen microcontroller platform is the MAX78000FTHR.
+For microcontroller selection, the main performance considerations are on the one hand the ability to communicate via SPI fast enough to comply with the desired sample rate, and on the other hand for it to have a fast enough clock rate and memory for the IIO Daemon which will comprise most of the final application. For further work, networking capabilities would be a nice-to-have to be able to run a standalone ROS2 node. A plethora of well known boards match these criteria, among which the very popular Espressif ESP8266 and ESP32, or the Raspberry Pi RP2040 and RP2350 would be sufficient and good alternative choices thanks to their excellent community support. The popular, yet more and more obsolete ATMEGA328p of Arduino fame isn't fast enough for both recording and further transferring all 16 channels, especially not through unmodifier IIOD / ros-micro implementations. We chose the Analog Devices MAX78000FTHR board thanks to its powerful specs which would also allow for some degree of digital signal processing on the board itself. We will use the MAX78000's dedicated SPI bus which is exposed on the feather board.
 
-Main requirements for the microcontroller:
-- SPI rate high enough to read the ADC at the wanted sample rate
-- Enough CPU freq and memory to run the IIO Daemon.
-
-Nice-to-haves:
-- Networking capabilities so it can run a ROS2 node as a standalone device, not needing another "carrier" to forward the data to the ROS network.
-
-Suitable very cheap microcontrollers:
-- ESP8266, ESP32
-- RP2040 based boards (Raspberry Pi Pico, GroundStudio Pico, other clones)
-
-The popular (yet more and more obsolete) ATMEGA328p of Arduino fame isn't fast enough for recording and further transferring all 16 channels. Especially not with a non-custom IIOD / ros-micro implementation.
+\todo{MAX78000 pinout diagram?}
 
 \newpage
 \subsection{Firmware part}
@@ -452,7 +625,9 @@ The popular (yet more and more obsolete) ATMEGA328p of Arduino fame isn't fast e
 
 \todo{The no-OS framework}
 
-\todo{What is No-OS and why do \we use it? Main points: more than a Hardware Abstraction Layer; decouples hardware platforms, peripherals, libraries. While it adds an initial development overhead, it helps a lot with porting the firmware to other boards, sensors, or even software communication schemes.}
+No-OS is a firmware framework developed by Analog Devices that defines a common API for accessing common peripherals on embedded systems. While its scope somewhat overlaps with a typical Hardware Abstraction Layer (HAL) within an Operating System, no-os focuses on providing minimal abstractions to run directly on bare metal, as the name suggests. Additionally, it provides abstractions for the platform architecture, build systems and custom vendor SDKs, such that code can be very easily ported from one platform to another.
+
+The benefits of using such a versatile framework were constantly apparent during this project's development, which required us to change the microcontroller platform, peripherals, as well as communication protocols during protoyping. While each change required small rewrites of the codebase, the uniform structure of no-os meant we didn't have to rewrite thousands of lines of code after each hardware change.
 
 \subsubsection{Serial communication with host}
 
@@ -478,7 +653,7 @@ For initial validation of the concept on the AD4114, \todo{write about the PoC: 
 
 \subsubsection{No-OS Driver}
 
-For easy portability to different microcontroller platforms and even other ADCs, I'm using the No-OS framework, which facilitates separating the general logic from product-specific code and settings.
+Fortunately, the no-OS ecosystem already provides drivers for both the MAX78000 platform as well as the AD4114 as part of the AD717X family of ADCs\cite{ad717x}. What's left is to 
 
 \subsubsection{IIOd integration}
 
