@@ -4,6 +4,12 @@
 #include "iio_trigger.h"
 #include "ad717x.h"
 
+struct ad4114_channel_config {
+    enum ad717x_odr odr_setting;
+    enum ad717x_order sinc_order;
+    float channel_odr;
+};
+
 typedef struct {
     struct iio_device iio_dev;
     ad717x_dev *dev; // Underlying AD4114 device
@@ -15,6 +21,8 @@ typedef struct {
     uint32_t sample_buf[16]; // Incomplete sample of all enabled channels
     uint8_t channel_offset[16]; // After converting channel X, store it in the buffer at channel_offset[X]
     uint8_t last_enabled_channel; // Used to detect a full sample buffer
+
+    struct ad4114_channel_config current_config; // Current ODR, filter settings
 }  iio_ad4114_exg_dev;
 
 struct iio_ad4114_exg_init_param {

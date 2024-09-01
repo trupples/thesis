@@ -33,22 +33,22 @@ static struct {
 	{VIN6_VINCOM, "VIN6-VINCOM"},
 	{VIN7_VIN6, "VIN7-VIN6"},
 	{VIN7_VINCOM, "VIN7-VINCOM"},
-    {VIN0_VIN1, "VIN8-VIN9"},
-	{VIN0_VINCOM, "VIN8-VINCOM"},
-	{VIN1_VIN0, "VIN9-VIN8"},
-	{VIN1_VINCOM, "VIN9-VINCOM"},
-    {VIN0_VIN1, "VIN10-VIN11"},
-	{VIN0_VINCOM, "VIN10-VINCOM"},
-	{VIN1_VIN0, "VIN11-VIN10"},
-	{VIN1_VINCOM, "VIN11-VINCOM"},
-    {VIN0_VIN1, "VIN12-VIN13"},
-	{VIN0_VINCOM, "VIN12-VINCOM"},
-	{VIN1_VIN0, "VIN13-VIN12"},
-	{VIN1_VINCOM, "VIN13-VINCOM"},
-    {VIN0_VIN1, "VIN14-VIN15"},
-	{VIN0_VINCOM, "VIN14-VINCOM"},
-	{VIN1_VIN0, "VIN15-VIN14"},
-	{VIN1_VINCOM, "VIN15-VINCOM"},
+    {VIN8_VIN9, "VIN8-VIN9"},
+	{VIN8_VINCOM, "VIN8-VINCOM"},
+	{VIN9_VIN8, "VIN9-VIN8"},
+	{VIN9_VINCOM, "VIN9-VINCOM"},
+    {VIN10_VIN11, "VIN10-VIN11"},
+	{VIN10_VINCOM, "VIN10-VINCOM"},
+	{VIN11_VIN10, "VIN11-VIN10"},
+	{VIN11_VINCOM, "VIN11-VINCOM"},
+    {VIN12_VIN13, "VIN12-VIN13"},
+	{VIN12_VINCOM, "VIN12-VINCOM"},
+	{VIN13_VIN12, "VIN13-VIN12"},
+	{VIN13_VINCOM, "VIN13-VINCOM"},
+    {VIN14_VIN15, "VIN14-VIN15"},
+	{VIN14_VINCOM, "VIN14-VINCOM"},
+	{VIN15_VIN14, "VIN15-VIN14"},
+	{VIN15_VINCOM, "VIN15-VINCOM"},
 	{TEMPERATURE_SENSOR, "Temperature"},
 	{REFERENCE, "Reference"}
 };
@@ -76,6 +76,7 @@ static int32_t iio_ad4114_exg_channel_get_input(void *device, char *buf, uint32_
         }
     }
 
+    return snprintf(buf, len, "%04x", chreg->value);
     // Value read from register does not match any known input: device is in an undocumented state
     // Not 100% sure EIO is the correct error for this.
     return -EIO;
@@ -128,52 +129,61 @@ static int32_t iio_ad4114_exg_channel_get_raw(void *device, char *buf, uint32_t 
     iio_ad4114_exg_dev *iio_dev = device;
     ad717x_dev *dev = iio_dev->dev;
     
-    int32_t raw = 0;
+    uint32_t raw = 0;
     int ret = ad717x_single_read(dev, channel->ch_num, &raw);
     if(ret)
     {
         return ret;
     }
+    raw = (raw >> 8) & 0xffffff; // Discard status byte
 
-    return snprintf(buf, len, "%d", raw);
+    return snprintf(buf, len, "%lu", raw);
 }
+
+// code = 2**23 * ((V * 0.1 / Vref) + 1)
+// V = (code - 2**23) * 2**-23 * Vref * 10
+// offset = -2**23 = 
+// scale = 2**-23 * Vref * 10 = 0.0029802322387 mV
 
 static int32_t iio_ad4114_exg_channel_get_scale(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "1.4901161193847656"); // uV / LSB
+    return snprintf(buf, len, "0.0029802322387"); // mV / LSB
 }
+
+static int32_t iio_ad4114_exg_channel_get_offset(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
+{
+    return snprintf(buf, len, "-8388608"); // -2**23 = -8388608
+}
+
+struct ad4114_channel_config ad4114_channel_configs[] = {
+    {},
+    {sps_1007, sinc5_sinc1, 1007},
+    {sps_2957, sinc5_sinc1, 1298.5},
+    {sps_5208, sinc5_sinc1, 1038.33},
+    {sps_10417, sinc5_sinc1, 1111},
+    {sps_15625, sinc5_sinc1, 1036.33},
+    {sps_31250_a, sinc5_sinc1, 1035.17},
+    {sps_31250_a, sinc3, 10309 / 7},
+    {sps_31250_a, sinc3, 10309 / 8},
+    {sps_31250_a, sinc3, 10309 / 9},
+    {sps_31250_a, sinc3, 10309 / 10},
+    {sps_31250_a, sinc3, 10309 / 11},
+    {sps_31250_a, sinc3, 10309 / 12},
+    {sps_31250_a, sinc3, 10309 / 13},
+    {sps_31250_a, sinc3, 10309 / 14},
+    {sps_31250_a, sinc3, 10309 / 15},
+    {sps_31250_a, sinc3, 10309 / 16}
+};
 
 static int32_t iio_ad4114_exg_get_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
 {
-    return snprintf(buf, len, "381"); //"1007");
-}
-
-static int32_t iio_ad4114_exg_set_sampling_frequency(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
-{
-    return -ENOSYS;
-}
-
-static int32_t iio_ad4114_exg_get_sampling_frequency_available(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
-{
-    // 1007: internal clock
-    // 1024: external clock, generate a 2*1024/1007 Mhz PWM signal. If done by the microcontroller, the jitter seems sort of alright (~20dB higher noise floor)
-    return snprintf(buf, len, "1007 1024");
-}
-
-static int32_t iio_ad4114_exg_get_powerdown(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
-{
-    return snprintf(buf, len, "0");
-}
-
-static int32_t iio_ad4114_exg_set_powerdown(void *device, char *buf, uint32_t len, const struct iio_ch_info *channel, intptr_t priv)
-{
-    return -ENOSYS;
+    return snprintf(buf, len, "%.2f", ((iio_ad4114_exg_dev *)device)->current_config.channel_odr);
 }
 
 // Channel definition
 
 struct scan_type iio_ad4114_exg_scan_type = {
-    .sign = 's',
+    .sign = 'u',
     .realbits = 24,
     .storagebits = 32,
     .shift = 0,
@@ -187,6 +197,7 @@ struct iio_attribute iio_ad4114_exg_channel_attributes[] = {
     { .name = "input_available", .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_channel_get_input_available, .store = 0 },
     { .name = "raw",             .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_channel_get_raw,             .store = 0 },
     { .name = "scale",           .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_channel_get_scale,           .store = 0 },
+    { .name = "offset",          .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_channel_get_offset,          .store = 0 },
     { 0 } // Terminates the list
 };
 
@@ -227,15 +238,42 @@ struct iio_channel iio_ad4114_exg_channels[] = {
 
 #undef IIO_AD4114_EXG_CHAN_DEF
 
+/* Sets sinc order and ODR for filter with given ID. */
+int32_t ad4114_set_filtcon(ad717x_dev *dev, uint8_t filtcon_id, enum ad717x_order sinc_order, enum ad717x_odr odr) {
+    ad717x_st_reg *filtcon_reg;
+	int32_t ret;
+
+	/* Retrieve the FILTCON register */
+	filtcon_reg = AD717X_GetReg(dev,
+				    AD717X_FILTCON0_REG + filtcon_id);
+	if (!filtcon_reg) {
+		return -EINVAL;
+	}
+
+	filtcon_reg->value &= ~(0x7f);
+    filtcon_reg->value |= (sinc_order << 5) | odr;
+
+	ret = AD717X_WriteRegister(dev, AD717X_FILTCON0_REG + filtcon_id);
+	if (ret) {
+		return ret;
+	}
+
+	return 0;
+}
+
 // Device methods
 static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
 {
     iio_ad4114_exg_dev *iio_dev = device;
     ad717x_dev *dev = iio_dev->dev;
     
-    for(int i = 0; i < 16; i++)
-    {
-        int ret = ad717x_set_channel_status(dev, i, mask & NO_OS_BIT(i));
+    int num_channels = 0;
+    for(int i = 0; i < 16; i++) num_channels += (mask >> i) & 1;
+
+    // Set channel configurations based on the number of channels
+    iio_dev->current_config = ad4114_channel_configs[num_channels];
+    for(int i = 0; i < 8; i++) {
+        int ret = ad4114_set_filtcon(dev, i, iio_dev->current_config.sinc_order, iio_dev->current_config.odr_setting);
         if(ret)
         {
             return ret;
@@ -248,12 +286,27 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
     {
         if(mask & NO_OS_BIT(i))
         {
+            int ret = ad717x_assign_setup(dev, i, k%8);
+            if(ret)
+            {
+                return ret;
+            }
+            
             iio_dev->channel_offset[i] = k++;
             iio_dev->last_enabled_channel = i;
         }
         else
         {
             iio_dev->channel_offset[i] = -1;
+        }
+    }
+
+    for(int i = 0; i < 16; i++)
+    {
+        int ret = ad717x_set_channel_status(dev, i, mask & NO_OS_BIT(i));
+        if(ret)
+        {
+            return ret;
         }
     }
 
@@ -361,9 +414,17 @@ int check_ad4114_ready(iio_ad4114_exg_dev *device)
 //     return 0;
 // }
 
+#if false
+
 char irq_log[1025];
 volatile int irq_log_idx;
-#define IRQLOG(x) do {irq_log[irq_log_idx++] = (x); if(irq_log_idx >= 1024) {irq_log_idx = 0; /* debug_break(); */ }} while(0)
+#define IRQLOG(x) do { irq_log[irq_log_idx++] = (x); if(irq_log_idx >= 1024) {irq_log_idx = 0; /*debug_break();*/ }} while(0)
+
+#else
+
+#define IRQLOG(x) do {} while(0);
+
+#endif
 
 static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 {
@@ -421,7 +482,7 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
     }
 
     int8_t status, channel;
-    int32_t data;
+    uint32_t data;
     ret = AD717X_ReadData(dev, &data);
     if(ret)
     {
@@ -448,13 +509,6 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
         IRQLOG('0' + (num % 10));
         IRQLOG('<');
 
-        // Stop acquisition if the buffer is full. Nobody's listening
-        if(num == dev_data->buffer->buf->size)
-        {
-            iio_dev->trig_desc.disable(iio_dev->trig);
-            return 0;
-        }
-
         ret = iio_buffer_push_scan(dev_data->buffer, iio_dev->sample_buf);
         if(ret)
         {
@@ -468,9 +522,7 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 // Device definition
 
 struct iio_attribute iio_ad4114_exg_attributes[] = {
-    { .name = "sampling_frequency",           .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_get_sampling_frequency,           .store = (attr_handler*) iio_ad4114_exg_set_sampling_frequency },
-    { .name = "sampling_frequency_available", .priv = 0, .shared = IIO_SHARED_BY_ALL, .show = (attr_handler*) iio_ad4114_exg_get_sampling_frequency_available, .store = 0 },
-    { .name = "powerdown",                    .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_get_powerdown,                    .store = (attr_handler*) iio_ad4114_exg_set_powerdown },
+    { .name = "sampling_frequency",           .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_get_sampling_frequency, .store = 0 },
     { 0 } // Terminates the list
 }; 
 
@@ -519,16 +571,35 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
         .mode = CONTINUOUS
     };
 
+    enum ad717x_analog_input_pairs default_pairs[] = {
+        VIN0_VINCOM,
+        VIN1_VINCOM,
+        VIN2_VINCOM,
+        VIN3_VINCOM,
+        VIN4_VINCOM,
+        VIN5_VINCOM,
+        VIN6_VINCOM,
+        VIN7_VINCOM,
+        VIN8_VINCOM,
+        VIN9_VINCOM,
+        VIN10_VINCOM,
+        VIN11_VINCOM,
+        VIN12_VINCOM,
+        VIN13_VINCOM,
+        VIN14_VINCOM,
+        VIN15_VINCOM,
+    };
+
     for(int i = 0; i < 16; i++)
     {
         ad4114_init.chan_map[i].channel_enable = 0;
         ad4114_init.chan_map[i].setup_sel = i / 2;
-        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = VIN0_VINCOM;
+        ad4114_init.chan_map[i].analog_inputs.analog_input_pairs = default_pairs[i];
     }
 
     for(int i = 0; i < 8; i++)
     {
-        ad4114_init.setups[i].bi_unipolar = 0;
+        ad4114_init.setups[i].bi_unipolar = 1; // 1 = bipolar coded ~ offset binary
         ad4114_init.setups[i].input_buff = 1;
         ad4114_init.setups[i].ref_buff = 1;
         ad4114_init.setups[i].ref_source = INTERNAL_REF; // AD717X_Init will ultimately activate the internal reference
@@ -541,15 +612,15 @@ int iio_ad4114_exg_init(iio_ad4114_exg_dev **iio_dev, struct iio_ad4114_exg_init
     if(ret)
         goto error_alloc;
 
-    // Activate CRC, status readout
+    // Activate status readout
     {
         ad717x_st_reg *interfaceReg;
 
         interfaceReg = AD717X_GetReg(dev->dev, AD717X_IFMODE_REG);
-        interfaceReg->value |= AD717X_IFMODE_REG_CRC_EN;
+        //interfaceReg->value |= AD717X_IFMODE_REG_CRC_EN;
         interfaceReg->value |= AD717X_IFMODE_REG_DATA_STAT;
         AD717X_WriteRegister(dev->dev, AD717X_IFMODE_REG);
-        AD717X_UpdateCRCSetting(dev->dev);
+        //AD717X_UpdateCRCSetting(dev->dev);
     }
 
     // Set up timer

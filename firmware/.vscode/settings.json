@@ -36,6 +36,11 @@
         "functional": "c",
         "ranges": "c",
         "tuple": "c",
-        "mstd_functional": "c"
+        "mstd_functional": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "mstd_iterator": "c",
+        "ratio": "c"
     },
 }

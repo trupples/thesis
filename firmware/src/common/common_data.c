@@ -13,18 +13,18 @@ struct no_os_uart_init_param uart_init = {
 
 struct no_os_spi_init_param spi_ad4114_init = {
     .chip_select = SPI_CS,
-    .max_speed_hz = 20000000,
+    .max_speed_hz = 5000000,
     .mode = NO_OS_SPI_MODE_3,
     .device_id = SPI_DEVICE_ID,
     .platform_ops = SPI_OPS,
     .extra = SPI_EXTRA
 };
 
-#define TICKS_COUNT 5
+#define TICKS_COUNT 2
 
 struct no_os_timer_init_param samplerdy_timer_init = {
     .id = SAMPLERDY_TIMER_ID, 
-    .freq_hz = 320000 * TICKS_COUNT, // 20000Hz / channel -> sufficient even with the 1733sps ODR when using sinc3
+    .freq_hz = 16000 * TICKS_COUNT,
     .ticks_count = TICKS_COUNT,
     .platform_ops = SAMPLERDY_TIMER_OPS,
     .extra = SAMPLERDY_TIMER_EXTRA
