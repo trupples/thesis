@@ -40,23 +40,19 @@
 
 \maketableofcontents
 
-\section{Introduction}
+\section{Introduction (2-3pg)}
 
-Electrophysiology \todo{what is}
+In electrophysiology, two prevalent modes of biopotential measurements are electrocardiography (ECG) and electromyography (EMG), measuring cardiac muscle potentials and skeletal muscle potentials respectively. While methods that use intracellular electrodes exist and are much more precise, using surface electrodes is very common thanks to their non invasive nature, albeit at a loss of spatial specificity due to them being limited to measuring a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions. On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
 
-The most prevalent\todo{cite} modes of biopotential measurements are electrocardiography (ECG) and electromyography (EMG), measuring cardiac muscle potentials and skeletal muscle potentials respectively. While methods that use intracellular electrodes exist and are much more precise \todo{cite}, using surface electrodes is very common thanks to their non invasive nature, albeit at a loss of specificity due to measuring a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions.\todo{cite} On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
-
-Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
-
-We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS2 and LibIIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS2 and LibIIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts.
-
-\todo{What is ROS2}
+Robot Operating System (ROS) is an open-source software framework for robotic applications, most importantly providing a flexible communication system ("the plumbing") that allows for real-time message-passing between networked nodes.\cite{ros} In practice, these nodes can be any component of the larger robotic system, be them anything from a discrete piece of hardware to a software component. Nodes communicate by sending messages, which can have varying levels of complexity, from primitives to nested aggregated structures, via "topics" which implement publish/subscribe semantics. In our application, the biopotential DAQ node can expose topics on which it publishes measured samples, for any other node to subscribe to for further signal processing.
 
 The Linux Industrial I/O (IIO) subsystem was created in 2008 and mainlined in 2012 (\href{https://github.com/torvalds/linux/commit/06458e277eac2b8761b0a04d3c808d57be281a2e}{commit \texttt{06458e2}}) to provide a simple and unified way to interact with devices with ADC or DAC capabilities, broadly ranging from plain ADC/DAC chips to Inertial Measurement Units (Accelerometers, Gyroscopes, Magnetometers), Software Defined Radio, robotic actuators and sensors, and more. Within the Linux kernel, it fills in a gap between the \textit{input} subsystem which can stream user input data and the \textit{hwmon} subsystem used for monitoring and controlling hardware state such as CPU temperature and fan settings, albeit with low refresh rate. The IIO subsystem provides a modular way to define high bandwidth communication with input/output devices directly connected to the host via SPI or I2C and specified as part of the device tree. Despite the subsystem's name, it is not limited to industrial production applications: IIO usage is ubiquitous in today's linux-based devices for integrating features such as accelerometers, gyroscopes or ambient light sensors in a uniform way, besides other hardware abstraction layers.
 
 \textit{Libiio} is a library which provices cross-platform functionality for interacting with both local and remote IIO devices within the same framework. To accomplish this, it implements the IIO Daemon (IIOD) for which it defines the \textit{IIOD protocol}. The current version of the IIOD protocol (v0.1) is based on a set of human readable commands sent via a single data stream of alternating client requests and server responses. This allows the same protocol to be used over a variety of transport layers, officially Serial (most relevant for this application), USB and TCP.
 
-We present overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
+Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
+
+We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS2 and LibIIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS2 and LibIIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts. An overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
 
 \begin{thesisfigure}{Overview of information flow}{flow}
 \begin{tikzpicture}[
@@ -139,7 +135,7 @@ We present overview of the information flow, from the biological signals to the 
 \end{thesisfigure}
 
 \newpage
-\section{Bibliographic research}
+\section{Bibliographic research (15pg)}
 
 % (current state of the art + problem justification + possible approaches)
 
@@ -155,10 +151,34 @@ From an electrophysiological standpoint, skeletal muscles are comprised of a num
 
 This starts out as an action potential (AP) at the innervation zone, wherein the span of 4-6ms, the membrane potential rises from the resting $-70 \mV$ to positive (depolarisation) and then back to the resting potential (repolarisation) by biomolecular mechanisms involving the flow of $\text{Na}^+$, $\text{K}^+$ and $\text{Cl}^-$ ions. This localized action potential also triggers action potential in neighbouring parts of the muscle cell, leading to a chain reaction down the muscle fiber with a clear external electrical manifestation: the Motor Unit Action Potential as a traveling impulse of ion flow, which is measurable via the potential fluctuations across tissue.
 
-Furthermore, two modes of measurement of MUAP arise: \textit{unipolar} measurements referred to a common potential and \textit{bipolar} measurements where consecutive electrodes' potentials are taken into differential amplifiers, as illustrated in figure \ref{fig:unibipolar}.
+Muscle fiber contractions follow the "all or nothing" principle, meaning a fiber either contracts fully or not at all. To modulate the force excerted by a muscle, only a part of the available motor units are recruited. Still, there is an independence between the number of motor units, number of fibers, and a muscle's strength, the motor unit count only improving the "resolution" of muscle control. By Henneman's size principle \cite{Henneman1957}, low effort contractions start by recruiting smaller motor units and gradually activate larger motor units as load increases. Besides this spatial control, muscular contraction is also controlled via rate coding, where the same motor unit is reactivated repeatedly, with the activation frequency positively correlating with the overall contraction strength, until fatigue is reached \cite{DeLuca1985}.
+
+As a practical result, during low effort motion where only one or a handful of motor units are engaged, the APs are very easily identifiable in the measured waveform. On the other hand, high effort contractions will manifest a superposition of uncorrelated MUAPs which are difficult to separate from just sEMG measurements. (figure \ref{fig:apmuap})
+
+\begin{thesisfigure}{Individually identifiable action potentials during a low-effort period (left). Superposition of action potential during a higher-effort movement (right). Electrodes placed $35\mm$ apart on inner forearm.}{apmuap}
+\includegraphics[width=0.45\linewidth, trim=5cm 10cm 3cm 10cm]{emg ap.pdf}
+\includegraphics[width=0.45\linewidth, trim=5cm 10cm 3cm 10cm]{emg muap.pdf}\\
+\vspace{0.5cm}
+\end{thesisfigure}
+
+Surface measurements have worse spatial resolution and cannot precisely pinpoint the source of the observed electrical activation, but rather "see" a potential halo. In the case of muscle fibers, the surface halo of a travelling action potential is modelled as a directional tripole with a leading positive depolarizing area, a trailing positive repolarizing area, and a strongly negative spike in the middle.\cite[Section 3]{Barbero2012}
+
+\subsubsection{Cardiac muscles: ECG}
+
+While the internal mechanisms of muscle contractions are similar between cardiac and skeletal muscle, their external activation strategies vary almost entirely. Cardiac muscle isn't divided into motor units and as such heartbeat strength cannot be modulated by recruitment, but rather by various chemical and mechanical factors that ultimately increase or decrease the availability of $\text{Ca}^{2+}$ ions, such as but not limited to: the Frank-Starling mechanism (which aids in stroke volume regulation), or hormone effects from secretion of adrenaline or norepinephrine.
+
+Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. \todo{FIGURE} Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
+
+Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. \todo{FIGURE illustrating cardiac dipole model}
+
+\subsection{Electronics for biopotential measurement}
+
+\subsubsection{Biopotential measurement modes}
+
+Two common modes of measurement of biopotentials arise: \textit{unipolar} measurements referred to a common point whose potential isn't affected too much by the observed process and \textit{bipolar} measurements where consecutive electrodes' potentials are taken into differential amplifiers, as illustrated in figure \ref{fig:unibipolar}. Both are relevant for a biopotential data acquisition system, and as such one of our goals is having a system that can do both.
 
 \begin{thesisfigure}{Unipolar (left) and bipolar (right) measurements with 4 electrodes}{unibipolar}
-\resizebox{0.8\textwidth}{!}{%
+\resizebox{0.6\textwidth}{!}{%
 \begin{circuitikz}
 \tikzstyle{every node}=[font=\Large]
 \draw (6.25,19) to[short, -o] (5,19) ;
@@ -228,29 +248,43 @@ Furthermore, two modes of measurement of MUAP arise: \textit{unipolar} measureme
 }
 \end{thesisfigure}
 
-Muscle fiber contractions follow the "all or nothing" principle, meaning a fiber either contracts fully or not at all. To modulate the force excerted by a muscle, only a part of the available motor units are recruited. Still, there is an independence between the number of motor units, number of fibers, and a muscle's strength, the motor unit count only improving the "resolution" of muscle control. By Henneman's size principle \cite{Henneman1957}, low effort contractions start by recruiting smaller motor units and gradually activate larger motor units as load increases. Besides this spatial control, muscular contraction is also controlled via rate coding, where the same motor unit is reactivated repeatedly, with the activation frequency positively correlating with the overall contraction strength, until fatigue is reached \cite{DeLuca1985}.
+\subsubsection{Driven Right Leg}
 
-As a practical result, during low effort motion where only one or a handful of motor units are engaged, the MUAP is very easily identifiable in the measured waveform. On the other hand, high effort contractions will manifest a superposition of uncorrelated MUAPs which are difficult to separate from just sEMG measurements. \todo{FIGURE from own measurements}
+In both measurement modes, having the patient's body properly referred to a known electrical node is very important for the proper functioning of amplification and sensing circuitry. If the patient is "disconnected" from the rest of the circuit, and only interfaced to with high impedance sensing electrodes, stray charges originating from various sources can push the entire patient's body to common-mode potentials above or below the measurable range. Static electricity from clothing can regularly build up hundreds or thousands of volts, which easily exceeds the measurement range of common ADCs or amplifiers. While electrostatic discharge can be accounted for with protection circuitry, such high common-mode voltages make signals unrecoverable.
 
-\subsubsection{Cardiac muscles: ECG}
+The solution is having a current path from the observed patient to the measurement aparatus' ground, through which charge imbalances can be equalized. This can just be a passive connection to ground (figure \ref{fig:drl} a), but using active components on this path allows us to modulate the potential difference between the patient and system ground, which opens up the opportunity to both bias all signals to a known voltage, as well as cancelling predictable or low-frequency noise, such as mains hum, by feeding its opposite as a bias.
 
-While the internal mechanisms of muscle contractions are similar between cardiac and skeletal muscle, their external activation strategies vary almost entirely. Cardiac muscle isn't divided into motor units and as such heartbeat strength cannot be modulated by recruitment, but rather by various chemical and mechanical factors that ultimately increase or decrease the availability of $\text{Ca}^{2+}$ ions, such as but not limited to: the Frank-Starling mechanism (which aids in stroke volume regulation), or hormone effects from secretion of adrenaline or norepinephrine.
+For the practicality of such a biasing circuit, it must connect to the patient in a relatively far away part of the body from what is being measured, so it will minimally interfere with the other electrodes,  with as little introduced differential voltages as possible. As per ECG doctrine, the right leg is often used, leading to the name "Driven Right Leg circuit", but this referencing electrode can be connected anywhere depending on the measurement at hand.
 
-Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. \todo{FIGURE} Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
+\subsubsection{Electrode types}
 
-Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. \todo{FIGURE illustrating a directional measurement}
+The first step we control in the signal chain is the point of contact with the patient. The electrode type and quality have a great influence on the overall design, performance, and subjective user experience.
 
-\subsubsection{Biopotential measurement modes}
+In the simplest case, just a metallic electrode connected to the body can sense electrical field changes, forming a polarizable electrode, which cannot offer consistent current flow, but rather acts like a capacitor, wherein ion concentrations on the skin surface will repel or attract electrons in the electrode, creating small currents.
 
+A much more advantageous setup is one in which the physiological ion currents can be directly converted to electrical current akin to a resistive interface, termed a non-polarizable electrode. By far the most commonly used electrodes are Ag/AgCl electrodes which fit into this category.\cite{Lee2008} These have a silver chloride surface layer, backed by a silver core, and historically other metals for cost reduction. These are commonly distributed as both dry electrodes, which contact the skin directly, but require an electrolyte solution to be applied for best results, as well as wet electrodes, with the electrolyte solution suspended in an elastic gel that adheres to both the electrode and skin, both illustrated in figure \ref{fig:agcl_photos}. The electrolyte solution provides free $\text{Cl}^-$ ions that facilitate the conversion of electric current to ionic current by ionic decomposition of the $\text{AgCl}$ layer or recombining $\text{Cl}^-$ ions with $\text{Ag}^+$ ions. Dry electrodes can also somewhat function without any electrolyte solution applied thanks to the dissolved $\text{NaCl}$ content of sweat, which also provides free chlorine cations.
 
+Chemically, the $\text{AgCl}$ layer partially decomposes into $\text{Ag}^+$ and $\text{Cl}^-$ ions when exposed to the aqueous electrolyte solution. When the body potential is higher than the electrode potential, i.e. there's a lack of anions in the body, chlorine cations flow from the electrolyte gel towards the body, further encouraging the decomposition reaction $\text{AgCl} \rightarrow \text{Ag}^+ + \text{Cl}^-$ to replenish them. The positive $\text{Ag}^+$ can precipitate out on the electrode surface, exchanging an electron and thus inducing conventional electrical current "into" the electrode. On the other hand, when the body is more negatively charged than the electrode, $\text{Cl}^-$ ions in solution will be in excess and will recombine with $\text{Ag}^+$ ions on the $\text{AgCl}$ surface. The new lack of silver anions promotes the ionization of the metallic silver layer, releasing electrons. In both cases, the Ag/AgCl electrode and electrolyte solution act like a mostly resistive interface, with some stray parallel capacitance.
 
-\subsection{Market research and literature review}
+Because of their prevalence, Ag/AgCl electrodes are inexpensive and easily obtainable from general medical suppliers. Additionally, \cite{Lee2022} presents 3 methods for fabricating dry Ag/AgCl electrodes, which can be implemented even in small scales and using cheap materials, were these not commercially available.
+
+The state of the art are conductive polymer PEDOT:PSS electrodes, thanks to their great mechanical, electrical, and chemical properties: They adhere and conform to skin, are flexible, self-healing, and have good biocompatibility, only falling behind the classic Ag/AgCl electrodes in terms of contact impedance, yet still being conductive enough for biopotential readings. \cite{Seiti2023,Hou2024}
+
+\subsection{Market research}
 
 Biopotential measurements are no new subject and many products already exist both in the academic and commercial fields. All are subject to engineering tradeoffs between parameters such as number of channels, sample rate, precision, noise, electrode types, etc., making each better suited to a certain use case. To the best of our research, there is no universal, modular and extensible solution to the problem of biopotential measurements. Further on, we overview some representative options for EMG / ECG DAQ systems:
 
 \subsection*{OpenBCI}
 
-Expensive, low data rate. \todo{more :)}
+The OpenBCI ("Open Brain-Computer Interface") project started in 2013 and provides open source boards mainly intended for EEG measurements, but which are also applicable for EMG and ECG. These have underwent a handful of revisions in the last decade, and the current generation consists of:
+
+\begin{itemize}
+    \item Cyton -- an 8 channel, 24 bit, DAQ based on the ADS1299. Retails for 917 Euro (as of 2024-08).
+    \item Ganglion -- a 4 channel, 24 bit, DAQ based on the MCP3912. Retails for 458 Euro (as of 2024-08).
+    \item Daisy -- an addon for the Cython providing 8 extra channels using a second ADS1299. Cython+Daisy package retails for 1835 Euro (as of 2024-08).
+\end{itemize}
+
+While the retail price on the OpenBCI store is steep, design files are provided for all products and they can be ordered and indivually built for a fraction of the cost. If built based on the schematics, the bulk of the cost will be the ICs, which add up to around 100 Euro (estimate as of 2024-08).
 
 \subsection*{ASPEN}
 
@@ -263,32 +297,31 @@ What we're doing, but better, but a PhD thesis.
 
 \subsection*{Quanser QNET Myoelectric board}
 
-Anecdotally, this is the board that sparked the idea for this project, being one of the experimental boards given to TUCN students. The Quanser QNET Myoelectric trainer board is a closed-source, one channel addon board for the National Instruments Elvis II. It provides a fixed amplification stage of ?gain? powered by a battery to remove power supply noise, and further uses the ELVIS' oscilloscope channel for analog to digital conversion. 
+The Quanser QNET Myoelectric trainer board is a closed-source, one channel addon board for the National Instruments Elvis II. It provides a fixed amplification stage of  powered by a battery to remove power supply noise, and further uses the ELVIS' oscilloscope channel for analog to digital conversion. Its signal chain consists of an overall gain of $300$, and first order LPF and HPF limiting the bandwidth to $20-500\Hz$.
 
-Depends on NI Elvis; one channel; not open \todo{more :)}
+Anecdotally, this is the board that sparked the idea for this project, as it is one of the experimental boards given to TUCN students.  It depends on the NI Elvis, only has one channel measurements, and is not open source. This makes it a good educational resource, but it falls short on both performance and cost.
 
 \subsection*{BioWare EXG Pills}
 
-As one of the cheapest options, the EXG Pill is an open source instrumentation amplifier board meant to aid in biopotential data acquisition by connecting it to another device with an ADC, typically an Arduino board. It is available for order on the creator's online shop, but being an open hardware project allows anyone to manufacture their own, to specification.
+As one of the cheapest related products, the EXG Pill is an open source instrumentation amplifier board meant to aid in biopotential data acquisition by connecting it to another device with an ADC, typically an Arduino board. It is available for order on the creator's online shop, but being an open hardware project allows anyone to manufacture their own, to specification. It is not an entire DAQ system, but rather just the amplification stage.
 
-\subsection*{Cometa Pico EMG}
+\subsection*{Cometa Pico EMG, Delsys Tringo}
 
-\href{https://www.cometasystems.com/pico-emg/}{Cometa Pico EMG}
+As one of the most polished products on the market, the Cometa Pico EMG and Delsys Tringo are two competing multi-channel wireless EMG DAQ systems.
 
-not open, expensive\todo{more :)}
+The Cometa Pico EMG supports up to 36 channels. Its sensors have a $2\kHz$ sample rate and an integrated IMU.\cite{cometapicoemg}
 
+The Delsys Tringo has a more flexible system with a range of different sensor types: single bipolar sensors, grid array sensors, snap electrode sensors, which are more intended for high end research. Comparable to the Pico EMG, the Trigno Avanti sensor has a max sample rate of $4370\ \text{sps}$ and also have integrated IMUs.\cite{delsysemg}
+
+On the other hand, being high-end commercial medical products, both systems cost orders of magnitude more than what we aim for (\cite{delToro2019} estimates 15000 Euro for the Cometa and 20000 Euro for the Delsys) and neither abide by the open source philosophy.
 
 \subsection*{MyoWare}
 
-\todo{more :)}
-
-\subsection*{the green one I forgot the name of}
-
-\todo{more :)}
+Advancer Technologies's line of MyoWare products started out in 2015 with their first generation MyoWare muscle sensor, which similarly to the BioWare EXG Pills described above, only provided the analog signal chain consisting of isolation, an adjustable amplifier and filtering, requiring an external ADC, with the Arduino Uno being recommended for small projects. The current generation has adjustable gain between $?-200$ and a bandpass filter between $20-500\Hz$.\cite{myoware}
 
 \subsection{Noise sources}
 
-The superposition of electrical signals measurable by biopotential DAQs contains a complicated mix of noise coming from various physiological and other external factors, besides the signal of interest. Additionally, the measurement circuitry compounds noise at every step. Modeling some of the main noise components of the entirawe signal chain is essential for its design and proper specification.
+The superposition of electrical signals measurable by biopotential DAQs contains a complicated mix of noise coming from various physiological and other external factors, besides the signal of interest. Additionally, the measurement circuitry compounds noise at every step. Modeling some of the main noise components of the entire signal chain is essential for its design and proper specification.
 
 Some of the studied noise sources are \textit{intrinsic} to the process and impossible to remove, such as thermal noise and the amplifier and ADC noise profiles. Others are not intrinsic, depend on the setup, and can be compensated for, such as mains hum.
 
@@ -378,15 +411,19 @@ Which can be rearranged to obtain an expression for RMS total noise $V_n$:
 \overline{V^2} = \frac{\overline{V_{meas}^2}}{G^2} + \underbrace{\left(\overline{V_{ni}^2} + \frac{\overline{V_{no}^2} + \overline{V_{na}^2}}{G^2}\right)}_{\overline{V_n^2}}
 \end{thesisequation}
 
+\subsubsection{Flicker noise}
+
+Especially prevalent in BJT transistors and devices built using them, flicker noise is a low-frequency phenomenon where various material defects induce fluctuations with power density $P \propto 1/f$. It is also manifested in other active devices (MOSFETs, JFETs) and passive components, with a mix of various mechanisms contributing to it, many of which not fully agreed upon. A practical yet relatively complex solution to flicker noise is modulating the signal of interest to higher frequencies using a chopper and lock-in amplifier. \cite{flickernoise}
+
 \subsubsection{ECG noise models}
 
-Besides the unavoidable thermal and electronics noise, further disturbances in ECG measurements can be classified, as per \cite{Chatterjee2020}, into: low frequency ($< 0.5\Hz$) baseline wander caused by body motion and electrode contact issues, power-line artifacts ($50/60\Hz$ and their harmonics) caused by insufficient power supply decoupling when the measurement device is connected to mains power, and muscle artifacts (EMG signals). Of the three, the first two are relevant and undesireable in any biopotential measurement, while the latter is obviously the signal of interest in EMG applications.
+Besides the previous intrinsic kinds of noise, further disturbances in ECG measurements can be classified, as per \cite{Chatterjee2020}, into: low frequency ($< 0.5\Hz$) baseline wander caused by body motion and electrode contact issues, power-line artifacts ($50/60\Hz$ and their harmonics) caused by insufficient power supply decoupling when the measurement device is connected to mains power and capacitive or inductive coupling between the patient and surrounding mains lines, and muscle artifacts (EMG signals). Of the three, the first two are relevant and undesireable in any biopotential measurement, while the latter is obviously the signal of interest in EMG applications.
 
 From a signal processing standpoint, a simple solution for low frequency wander and power line artifacts is using a DC blocking comb filter, but these can also be addressed in the hardware design, especially when it comes to power supply decoupling.
 
 \subsection{Signal chain design}
 
-With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. As such, intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcomigng parasitic effects and signal chain noise before reaching the ADC.
+With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. Intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcomigng parasitic effects and signal chain noise before reaching the ADC.
 
 \subsubsection{Noise and gain in cascaded signal processing structures}
 
@@ -402,7 +439,7 @@ Instrumentation amplifiers are a class of differential amplifier which boast hig
 
 \subsubsection{Multiplexed ADCs}
 
-
+\todo{write about them :)   - multiple channels, single converter, multiplexor (possible configurations - limited or arbitrary?), digital filtering, sequencer, conversion clock dependence on communication clock makes noise and is bad}
 
 \subsubsection{EMI prevention over long wires}
 
@@ -410,10 +447,18 @@ When dealing with long wires and weak signals, electromagnetic interference (EMI
 
 \subsubsection{Common collector voltage buffer}
 
-Later used in both the preamplifier and Driven Right Leg circuits, the common collector amplifier, illustrated in figure ?? is a minimal and cheap circuit for providing a low impedance, high drive strength "mirror" of an incoming signal with potentially higher impedance.
+Later used in both the preamplifier and Driven Right Leg circuits, the common collector amplifier, illustrated in figure \ref{fig:volbuf} is a minimal and cheap circuit for providing a low impedance, high drive strength "mirror" of an incoming signal with potentially higher impedance.
+
+\begin{thesisfigure}{Common-collector voltage buffer}{volbuf}
+
+circuit frumos :)
+
+\end{thesisfigure}
+
+Assuming the input voltage puts the transistor in the linear operating range, the output voltage will 
 
 \newpage
-\section{Analysis, design and implementation}
+\section{Analysis, design and implementation (30pg)}
 
 \subsection{Objectives}
 
@@ -452,60 +497,63 @@ Guiding principles:
 
 \todo{After finishing the prototype, make a comparison table between the already existing products and mine, especially on these objectives}
 
-\todo{Signal chain figure:
-1. Patient, anatomy
-2. Electrodes
-3. Buffer and amplification
-4. ADC
-5. Microcontroller, using the no-OS framework. Contains customizable digital filters
-6. IIO protocol
-7. Linux IIO subsystem
-8. libiio, pyadi-iio
-variant A, with a network-enabled microcontroller:
-from 5, ROS2 protocol {find the name!} to ROS2 network running on the microcontroller
-variant B, with a microcontrollwe without networking capabilities:
-from 8, ROS2 protocol to ROS2 network running on the carrier board / host}
-
 \newpage
 \subsection{Electical part}
 
 \subsubsection{Interfacing with the patient}
 
-The first step we control in the signal chain is the point of contact with the patient. The electrode type and quality have a great influence on the overall design, performance, and subjective user experience.
+Taking from the research from section \ref{electrodetypes}, we do not consider PEDOT:PSS electrodes to be viable for this project due to them not being commercially available in standard and mass produced forms, being mostly a custom product experimented with in today's laboratories, even half a century after their discovery in the 1980s.
 
-The state of the art are conductive polymer PEDOT:PSS electrodes, thanks to their great mechanical, electrical, and chemical properties: They adhere and conform to skin, are flexible, self-healing, and have good biocompatibility, only falling behind the classic Ag/AgCl electrodes in terms of contact impedance, yet still being conductive enough for biopotential readings. \cite{Seiti2023,Hou2024} We do not consider them viable for this project due to them not being commercially available in standard and mass produced forms, being mostly a custom product experimented with in today's laboratories, even half a century after their discovery in the 1980s.
-
-DIY cheap alternative \todo{cite that paper with DIY AgCl electrodes}
-
-This project settles for snap-on adhesive ECG gel electrodes thanks to being cheap, readily avaialble, standardized, and they can be connected to with inexpensive aligator clips, besides special (but more expensive) snap clips. The downsides are their low shelf life \todo{compare expired electrode signal quality with fresh electrodes once I get some fresh ones}, comparatively larger contact area (cca $200\mm^2$ vs \cite{Barbero2012}'s 2mm electrode diameters), and are lacking in subjective user experience, sometimes being very painful to detach.
+We settle for for snap-on adhesive Ag/AgCl gel electrodes thanks to being cheap, readily avaialble, standardized, and they can be connected to with inexpensive aligator clips, besides special (but more expensive) snap clips. The downsides are their low shelf life \todo{compare expired electrode signal quality with fresh electrodes once I get some fresh ones}, comparatively larger contact area (cca $200\mm^2$ vs \cite{Barbero2012}'s 2mm electrode diameters), and are lacking in subjective user experience, sometimes being very painful to detach.
 
 \subsubsection{ADC}
 
-\todo{preface on how to choose an ADC}
-
 We initially chose the AD7124-8\cite{AD7124-8} thanks to its very diverse feature set, including: programmable gain amplifiers (PGAs) which had the potential to remove the need for the external amplification stage, high precision, high number of channels, and high sample rate. Unfortunately, it is not a single cycle ADC. This means that although it has very good throughput on a single channel, when switching between two channels there is a dead time for the integrated filter to settle, which effectively reduces the per-channel sample rate to less than $100\Hz$ when sampling all 16, which is virtually useless for ECG ($f_\text{max}=150\Hz$) and EMG ($f_\text{max}=500\Hz$).
 
-Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherwise has very good specs and has a much higher sample rate and a single cycle conversion mode.
+Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherwise has very good specificationss and has a much higher sample rate and a single cycle conversion mode.
 
-\todo{spec comparison between AD7124-8 and AD4114?}
+The AD717X family of ADCs, which the AD4114 is part of (in spite of the numbering scheme), all expose a similar interface to the application developer. A number of channels can be enabled, which are then measured in a loop, in ascending order of their indices. Each of the 16 channels can select one of 34 inputs: 16 unipolar measurements ($V_{in,k} - V_{incom}$, 16 bipolar measurements ($V_{in,2k} - V_{in,2k+1}$ and $V_{in,2k+1} - V_{in,2k}$), an internal temperature sensor or the voltage reference itself. If an input is selected by multiple channels, it is read multiple times in the sequence. To parametrize a channel's conversion, one of 8 "setups" can be assigned. Setups describe whether a measurement is unipolar of bipolar, the used reference, buffering and filtering settings. Each setup has a corresponding digital filter with an internal state. If multiple channels refer to the same setup, they will also be alternately using the same digital filter, requiring some extra logic for avoiding latent (i.e. "hidden") samples from passing from one channel's to another's readouts. Conveniently, the \texttt{SING\_CYC} flag puts the ADC in "single cycle mode", which always flushes out the digital filter when switching channels, at the expense of worse filter performance, data rates, and greater noise.
 
-\todo{describe AD4114 function, especially: channels vs setups, internal channel sequencer, overall communication model, \textbf{how to check for new samples}, noise versus sample rate. All of these will more or less paraphrase the datasheet.}
+The AD4114 lacks an internal sample buffer, meaning that data from a conversion must be read before the next one or else it is lost. While the digital interface allows for an interrupt signal on the \drdy line to notify the host of new data, it is incompatible with most microcontrollers' hardware SPI implementations and it is much more suitable for an FPGA host. Therefore we can and should resort to polling the status register to check for new samples, which are announced through the \texttt{RDY} bit. Polling should be done at least as fast as the conversion rate, but SPI transactions are cheap enough to poll even an order of magnitude more often than samples are coming in.
 
-\todo{$1007\Hz$ and $6211\Hz$ are the sample rates we're most interested in}
+One of the most important limitations in determining which parameters to run the ADC in is its noise, which varies with the sample rate. While high sample rates are very desirable given we have practically limitless digital signal processing capacity, they also degrade the signal quality. This is especially relevant when sampling multiple channels, where the Output Data Rate (ODR) is divided between them. A single channel measurement with $\ge 500\Hz$ bandwidth can be done with the $1007\Hz$ setting for an effective resolution of $17.3\text{ bits}$, but having 6 channels forces the use of the $6211\Hz$ setting with $15.4\text{ bits}$ of resolution, and more channels than that start limiting the bandwidth to less than $500\Hz$.
+
+For this purpose, we selected 7 configurations depending on the number of required channels so as to maintain at least $1000\Hz$ per-channel sample rate (table \ref{tab:configs}). Measurements of up to $6$ channels (single-ended or differential alike) can use the better performing sinc5+sinc1 filter. Measurements of $7 - 10$ channels cannot achieve the desired sample rate without switching to the faster yet more noisy sinc3 filter. Measurements of $11 - 16$ channels cannot achieve the desired sample rate in any configuration using the AD4114, with the max per-channel sample rate degrading to $10309/16=644.3125\Hz$ for the maximum of 16 channels.
+
+\begin{thesistable}{0.9}{l|llll}{Selected measurement configurations and their specifications}{configs}
+
+N & ODR ($\Hz$) & Filter & Per-channel rate ($\Hz$) & Noise ($\uV$ RMS) \\\hline
+$1$ & $1007$ & sinc5+sinc1 & $1007$ & $20$ \\
+$2$ & $2597$ & sinc5+sinc1 & $1298.5$ & $38$ \\
+$3$ & $3115$ & sinc5+sinc1 & $1038.33$ & $41$ \\
+$4$ & $4444$ & sinc5+sinc1 & $1111$ & $56$ \\
+$5$ & $5181.65$ & sinc5+sinc1 & $1036.33$ & $64$ \\
+$6$ & $6211$ & sinc5+sinc1 & $1035.17$ & $74$ \\
+$7+$ & $10309$ & sinc3 & $10309/N$ & $1068$
+
+\end{thesistable}
 
 \subsubsection{Amplification stage}
 
-The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to $\text{LSB} = V_{REF} / (2^N \cdot 0.1)$. Using the internal $2.5\V$ reference, $\text{LSB} \approx 1.49\uV$. The noise level varies depending on the sample rate. At the wanted $f_s=1007\Hz$ and maximum $f_s=6211\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$ and $\overline{V_{na,6211}^2}=74\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs (assuming a $1\mV$ signal):
+The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to the following in the bipolar measurement mode.
+\begin{thesisequation}{lsb}
+\text{LSB} = V_{REF} / (2^{N-1} \cdot 0.1)
+\end{thesisequation}
+
+Using the internal $2.5\V$ reference, $\text{LSB} \approx 2.98\uV$. The noise level varies depending on the sample rate. At the single-channel $f_s=1007\Hz$, 6 channel $f_s=6211\Hz$, and all channel $f_s=10309\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$, $\overline{V_{na,6211}^2}=74\uV$ and $\overline{V_{na,10309}^2}=1068\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs relative to a $1\mV$ signal:
 
 \begin{thesisequation}{SNR_no_amp}
 \begin{aligned}
 \text{SNR}_{(\dB)} &= 10\log_{10}\left(\frac{(1\mV)^2}{\overline{V_{na}^2}}\right) \\
 \text{SNR}_{1007} &\approx 34\dB \\
-\text{SNR}_{6211} &\approx 23\dB 
+\text{SNR}_{6211} &\approx 23\dB \\
+\text{SNR}_{10309} &\approx -0.6\dB
 \end{aligned}
 \end{thesisequation}
 
-We choose the AD8226 \cite{AD8226} instrumentation amplifier for the preamp stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth of $\Delta f=500\Hz$ is:
+In the case of 7+ channels, a $1\mV$ signal slightly dips under the noise floor, becoming unmeasurable. Thus, a preamplification stage is required for enabling the use of all channels.
+
+We choose the AD8226 \cite{AD8226} instrumentation amplifier as the central component of the preamplification stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth of $\Delta f=500\Hz$ is:
 
 \begin{thesisequation}{8266_noise}
 \begin{aligned}
@@ -523,7 +571,7 @@ With the preamp stage added before the ADC, the total noise of a sample and the 
 \end{aligned}
 \end{thesisequation}
 
-As described in section \ref{ampandadcnoise}, increasing the gain will increase SNR but with diminishing returns, and it will limit the available measurement range. With the specified values for the AD8226, we compute a handful of gain scenarios (table \ref{tab:gains}) and choose $G\approx 20$ as a fair middleground between good SNR and good input range. For this, we use the part's gain formula to compute a suitable gain resistor:
+As described in section \ref{ampandadcnoise}, increasing the gain will increase SNR but with diminishing returns, and it will limit the available measurement range. With the specified values for the AD8226, we compute a handful of gain scenarios (table \ref{tab:gains}) and choose $G\approx 20$ as a fair middleground between good SNR and good input range, allowing for some fluctuations without saturating the sensors. We use the part's gain formula to compute a suitable gain resistor:
 
 \begin{thesisequation}{}
 R_G = \frac{49.4\kohm}{G-1} = \frac{49.4\kohm}{20-1} \approx 2600\ohm
@@ -532,7 +580,7 @@ R_G = \frac{49.4\kohm}{G-1} = \frac{49.4\kohm}{20-1} \approx 2600\ohm
 The closest E6-series value is $R_G = 2200\ohm$ which would give a gain of $G\approx 22.45 \approx +27\dB$.
 
 \begin{thesistable}{0.4}{l|ll}{Full scale, SNR for various gains}{gains}
-Gain & Approx. full scale & $\text{SNR}$ \\ \hline
+Gain & Approx. range & $\text{SNR}$ \\ \hline
 1    & $5\V$      & $34\dB$ \\
 2    & $2.5\V$    &  $40\dB$ \\
 5    & $1\V$      &  $48\dB$ \\
@@ -541,15 +589,16 @@ Gain & Approx. full scale & $\text{SNR}$ \\ \hline
 50   & $100\mV$   &  $64\dB$ \\
 100  & $50\mV$    &  $65\dB$ \\
 1000 & $5\mV$     &  $66\dB$ \\
+$\infty$ & $0$    & $66.16\dB$
 \end{thesistable}
 
-Using an active element (the instrumentation amplifier) also gives us the opportunity to do some hardware filtering. To combat high frequency noise, we choose to add a first order RC low-pass filter with a cutoff of $f_c \approx 500\Hz$. Our implementation uses $R=330\ohm$ and $C=1\uF$ for a theoretical $3\dB$ cutoff frequency of:
+Using an active element (the instrumentation amplifier) also gives us the opportunity to do some hardware filtering. To combat high frequency noise, we add a first order RC low-pass filter with a cutoff of $f_c \approx 500\Hz$. Our implementation uses $R=330\ohm$ and $C=1\uF$ for a theoretical $3\dB$ cutoff frequency of:
 
 $$f_c = \frac{1}{2\pi \cdot 330\ohm \cdot 1\uF} = 482.28\Hz$$
 
-To encode the bipolar differential measurement as a unipolar signal, we bias the amplifier's output voltage using the AD8226's $V_{REF}$ input. As specified, this pin must be driven with less than $2\ohm$ impedance, so just a simple resistor divider wouldn't suffice. We use a common-collector voltage buffer after a $10\kohm - 10\kohm$ divider to amplify the drive strength, biasing the output to approximately $V_{REF} \approx 5\V / 2 - 0.7\V = 1.8V$.
+To encode the bipolar differential measurement as a unipolar signal, we bias the amplifier's output voltage using the AD8226's $V_{REF}$ input. As specified in the datasheet, this pin must be driven with less than $2\ohm$ impedance, so just a simple resistor divider wouldn't suffice. We use a common-collector voltage buffer after a $10\kohm - 10\kohm$ divider to amplify the drive strength, biasing the output to approximately $V_{REF} \approx 5\V / 2 - 0.7\V = 1.8V$.
 
-To help with transient power supply fluctuations, the instrumentation amplifier's positive supply is also decoupled with a $0.1\uF$ capacitor.
+To help with transient power supply fluctuations, the instrumentation amplifier's positive supply as well as $V_{REF}$ are decoupled with $0.1\uF$ capacitors. The second should also reduce BJT flicker noise.
 
 The overall circuit diagram and a picture of the built amplifier board are presented in figure \ref{fig:ampboard}.
 
@@ -557,21 +606,21 @@ We validate this preamplifier board with two tests using the ADALM2000 platform.
 
 For the first test, a sinusoidal $A_{test} = 50\mV$ peak-peak test signal is applied. The measured waveform displays the expected DC bias of $\overbar{V_{amp}}=1.88\V$, and an amplitude of $A_{amp}=1.23\V$ peak-peak, giving an effective gain of $G = A_{amp} / A_{test} = 24.6$, just within the $10\%$ tolerance of the designed $G=22.45$ imposed by the passive components we used. For these amplitudes, the harmonic distortion and amplifier noise are below the $-80\dB\text{FS}$ noise floor of the ADALM2000.
 
-Secondly, we test the frequency response using the Network analyzer feature of the Scopy software\cite{scopy}. A $10\Hz - 10\kHz$ sine sweep is generated, plugged into the amplifier, and the resulting output is measured, determining both the magnitude and phase relation, which are plotted in figure \ref{fig:preampbode}. Both the measured magnitude and phase characteristics match the ideal ones well enough, especially given the $10\%$ tolerances of the passives, successfully validating the performance of this part of the signal chain.
+Secondly, we test the frequency response using the Network analyzer feature of the Scopy software\cite{scopy}. A $10\Hz - 10\kHz$ sine sweep is generated, plugged into the amplifier, and the resulting output is measured, determining both the magnitude and phase relation, which are plotted in figure \ref{fig:preampbode}. Both the measured magnitude and phase characteristics match the ideal ones well enough, especially given the $10\%$ tolerances of the passives. For frequencies above $1\kHz$, the signal amplitude decreases to small multiples of the ADALM2000 resolution, leading to increasing amounts of quantization noise, which can be seen in both the magnitude plot as an increased reported magnitude, as well as in the phase plot as phase noise. This isn't concerning, as the desired amplification and corner frequency are properly measurable and validated. These two tests successfully validate the performance of this part of the signal chain.
 
 
 \begin{thesisfigure}{Circuit diagram and photo of built amplifier board}{ampboard}
 
-\includegraphics[width=0.6\linewidth]{ampboard_schematic.png}\\
-\includegraphics[width=0.6\linewidth]{ampboard_photo.jpg}
+\includegraphics[width=0.48\linewidth]{ampboard_schematic.png} 
+\includegraphics[width=0.48\linewidth]{ampboard_photo.jpg}
 
 \end{thesisfigure}
 
-\begin{thesisfigure}{Preamplifier board frequency response, measured and ideal $500\Hz$ first order LPF}{preampbode}
+\begin{thesisfigure}{Measured preamplifier frequency response, compared to ideal component $+27\dB$ gain, $500\Hz$ first order LPF amplifier}{preampbode}
 \begin{tikzpicture}
 
 \begin{semilogxaxis}[
-        width=14cm, height=6cm,
+        width=14cm, height=5cm,
         xmin=10, xmax=10000,
         ylabel={Magnitude [dB]},
         grid=both,
@@ -590,7 +639,7 @@ Secondly, we test the frequency response using the Network analyzer feature of t
 \begin{tikzpicture}
 
 \begin{semilogxaxis}[
-        width=14cm, height=6cm,
+        width=14cm, height=5cm,
         xlabel={Frequency [Hz]}, xmin=10, xmax=10000,
         ylabel={Phase [deg]}, ymin=-90, ymax=0,
         grid=both,
@@ -721,7 +770,7 @@ ROS is for robotics, what about just doing some basic signal processing in pytho
 \todo{implement :)}
 
 \newpage
-\section{Results and validation}
+\section{Results and validation (3pg)}
 
 To test the performance of the system:
 
@@ -729,12 +778,6 @@ To test the performance of the system:
 - EMG is the main goal of the project, but it is more forgiving, because:
     - The signal has greater amplitude (about 10x? check both sources and experimental data!!!)
     - The signal features are not as well defined and are usually modeled like noise for signal processing.
-
-\subsection{Electrical validation}
-
-Using a waveform generator, we can compare this device's measurements with both:
-- Precision oscilloscope readings
-- Another biopotential DAQ system (Tassos')
 
 \todo{more :) :)}
 
@@ -746,24 +789,22 @@ Using a waveform generator, we can compare this device's measurements with both:
 
 \todo{more :) :)}
 
-\subsection*{Usage for EEG???}
-
-\todo{This would just be a cherry on top if I really don't have anything left to do in the last few days. A cool experiment would be trying out a quick and dirty \href{https://en.wikipedia.org/wiki/N100}{N100} demo. Could have a handful of visible targets on the screen, have some orthogonal and time-uncorrelated activations for each, correlate EEG (single ended frontal-occipital) with each of the PRBS to determine which target the user is focusing on}
-
 \newpage
-\section{Conclusion}
+\section{Conclusion (1-2pg)}
 
-We present a hardware + software solution for biopotential measurements of up to 16 single-ended or 8 differential channels, with \todo{specs}, intended for easy and affordable maintainability, using off-the-shelf components and open source hardware and software, and being fit for 
+We present a hardware + software solution for biopotential measurements of up to 16 single-ended or 8 differential channels, with \todo{specs}, intended for easy and affordable maintainability, using off-the-shelf components and open source hardware and software.
 
 \subsection{Future work}
 
+While initial ambitions were high, the project fell short of all proposed objectives. 
+
 Among initial ambitions which unfortunately 
 
+\section*{Acknowledgements}
+
+I would like to sincerely thank Tassos Natsakis for his guidance and unending patience, Mark Thoren for the incredibly helpful mixed-signal design resources, and Monica Ignat for kindly giving me the work flexibility I needed to finish this project.
+
 \newpage
-\section{Acknowledgements}
-
-- Mark Thoren
-
 \section{Bibliography}
 
 \printbibliography[heading=none]
