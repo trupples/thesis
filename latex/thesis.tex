@@ -1,5 +1,6 @@
 \documentclass{thesis}
 
+\usepackage[inkscapeformat=png]{svg}
 \usepackage{siunitx}
 \usepackage{tikz}
 \usepackage{circuitikz}
@@ -21,12 +22,15 @@
 \newcommand{\nV}{\unit{\nano\volt}}
 \newcommand{\Hz}{\unit{\hertz}}
 \newcommand{\kHz}{\unit{\kilo\hertz}}
+\newcommand{\ms}{\unit{\milli\second}}
 \newcommand{\us}{\unit{\micro\second}}
+\newcommand{\cm}{\unit{\centi\meter}}
 \newcommand{\mm}{\unit{\milli\meter}}
 \newcommand{\K}{\unit{K}}
 \newcommand{\ohm}{\unit{\ohm}}
 \newcommand{\kohm}{\unit{\kilo\ohm}}
 \newcommand{\dB}{\unit{\deci\bel}}
+\newcommand{\dBV}{\unit{\deci\bel\volt}}
 \newcommand{\uF}{\unit{\micro\farad}}
 
 % Signal names
@@ -112,13 +116,11 @@ We aim to fill this gap and provide an affordable and easily maintainable hardwa
 
     \node (lib) [component, below=18mm of iod] { LibIIO };
     \node (pyt) [component, right=5mm of lib] { Python bindings };
-    \node (cpp) [component, below=5mm of pyt] { C++ bindings };
-    \node (rem) [below=25mm of lib.west,anchor=west] { Remote LibIIO instance };
+    \node (rem) [below=15mm of lib.west,anchor=west] { Remote LibIIO instance };
 
     \path [<->, draw, thick]
         (iod) edge node [very near start, right, anchor=north west] {Serial over USB} (lib)
         (lib) edge (pyt.west)
-        (lib) edge (cpp.west)
         (lib) edge (rem);
 
     \node (ros) [component, right=5mm of pyt] { ROS2 publisher node };
@@ -126,11 +128,10 @@ We aim to fill this gap and provide an affordable and easily maintainable hardwa
 
     \path [<->, draw, thick]
         (pyt) edge (ros)
-        (cpp.east) edge (ros)
         (ros) edge (net);
 
 
-    \node [fit={(ros) (cpp) ([yshift=1.5em]lib.north west)},system,label={[text=black!40,anchor=north]north:Software running on host}] {};
+    \node [fit={(ros) (pyt) ([yshift=1.5em]lib.north west)},system,label={[text=black!40,anchor=north]north:Software running on host}] {};
 \end{tikzpicture}
 \end{thesisfigure}
 
@@ -145,7 +146,7 @@ We aim to fill this gap and provide an affordable and easily maintainable hardwa
 
 As part of normal function, all biological cells have a difference of electrical potential between their interior and their exterior, called the \textit{membrane potential}. In the steady state, the \textit{resting membrane potential} of both skeletal muscle cells and that of cardiomyocytes (cardiac muscle cells) is in the $\numrange{-70}{-90} \mV$ range \cite{Hopkins2006,Klabunde2011-jo}.
 
-\subsubsection{Skeletal muscles: sEMG}
+\subsubsection*{Skeletal muscles: sEMG}
 
 From an electrophysiological standpoint, skeletal muscles are comprised of a number of motor units (MU), each corresponding to an individual axon that innervates a number of muscle fibers. Neural impulses travel from the central nervous system via nerves to a motor unit's innervation zone (IZ), where a number of neuromuscular junction synapses trigger an action potential in the fibers of that motor unit. The electrical activation of the muscle doesn't take place all across the fiber simulataneously, but rather travels from the innervation zone towards the tendons as an impulse.
 
@@ -163,7 +164,7 @@ As a practical result, during low effort motion where only one or a handful of m
 
 Surface measurements have worse spatial resolution and cannot precisely pinpoint the source of the observed electrical activation, but rather "see" a potential halo. In the case of muscle fibers, the surface halo of a travelling action potential is modelled as a directional tripole with a leading positive depolarizing area, a trailing positive repolarizing area, and a strongly negative spike in the middle.\cite[Section 3]{Barbero2012}
 
-\subsubsection{Cardiac muscles: ECG}
+\subsubsection*{Cardiac muscles: ECG}
 
 While the internal mechanisms of muscle contractions are similar between cardiac and skeletal muscle, their external activation strategies vary almost entirely. Cardiac muscle isn't divided into motor units and as such heartbeat strength cannot be modulated by recruitment, but rather by various chemical and mechanical factors that ultimately increase or decrease the availability of $\text{Ca}^{2+}$ ions, such as but not limited to: the Frank-Starling mechanism (which aids in stroke volume regulation), or hormone effects from secretion of adrenaline or norepinephrine.
 
@@ -425,10 +426,6 @@ From a signal processing standpoint, a simple solution for low frequency wander 
 
 With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. Intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcomigng parasitic effects and signal chain noise before reaching the ADC.
 
-\subsubsection{Noise and gain in cascaded signal processing structures}
-
-
-
 \subsubsection{Instrumentation amplifiers}
 
 Instrumentation amplifiers are a class of differential amplifier which boast high open-loop gain, low noise, and high input impedance. The typical textbook realization is with 3 operational amplifiers connected like in figure \ref{fig:inamp}, which allow the gain to be adjusted by choosing the value of resistor $R_G$. Their high input impedance means that very little current is needed to affect the inputs, helping with the issue of high electrode and tissue impedance. Their high power supply rejection ratio (PSRR) and common mode rejection ratio (CMRR) make them even more suitable for differential electrode applications, requiring very little extra circuitry.
@@ -455,7 +452,11 @@ circuit frumos :)
 
 \end{thesisfigure}
 
-Assuming the input voltage puts the transistor in the linear operating range, the output voltage will 
+Assuming the input voltage puts the transistor in the linear operating range, the output voltage will lie around:
+
+\begin{thesisequation}{buffereq}
+V_{out} = V_{in} - V_{BE} \approx V_{in} - 0.7\V
+\end{thesisequation}
 
 \newpage
 \section{Analysis, design and implementation (30pg)}
@@ -600,65 +601,13 @@ To encode the bipolar differential measurement as a unipolar signal, we bias the
 
 To help with transient power supply fluctuations, the instrumentation amplifier's positive supply as well as $V_{REF}$ are decoupled with $0.1\uF$ capacitors. The second should also reduce BJT flicker noise.
 
-The overall circuit diagram and a picture of the built amplifier board are presented in figure \ref{fig:ampboard}.
-
-We validate this preamplifier board with two tests using the ADALM2000 platform. It powers the board, generates test signals, and measures the amplified output.
-
-For the first test, a sinusoidal $A_{test} = 50\mV$ peak-peak test signal is applied. The measured waveform displays the expected DC bias of $\overbar{V_{amp}}=1.88\V$, and an amplitude of $A_{amp}=1.23\V$ peak-peak, giving an effective gain of $G = A_{amp} / A_{test} = 24.6$, just within the $10\%$ tolerance of the designed $G=22.45$ imposed by the passive components we used. For these amplitudes, the harmonic distortion and amplifier noise are below the $-80\dB\text{FS}$ noise floor of the ADALM2000.
-
-Secondly, we test the frequency response using the Network analyzer feature of the Scopy software\cite{scopy}. A $10\Hz - 10\kHz$ sine sweep is generated, plugged into the amplifier, and the resulting output is measured, determining both the magnitude and phase relation, which are plotted in figure \ref{fig:preampbode}. Both the measured magnitude and phase characteristics match the ideal ones well enough, especially given the $10\%$ tolerances of the passives. For frequencies above $1\kHz$, the signal amplitude decreases to small multiples of the ADALM2000 resolution, leading to increasing amounts of quantization noise, which can be seen in both the magnitude plot as an increased reported magnitude, as well as in the phase plot as phase noise. This isn't concerning, as the desired amplification and corner frequency are properly measurable and validated. These two tests successfully validate the performance of this part of the signal chain.
-
+The overall circuit diagram and a picture of the built amplifier board are presented in figure \ref{fig:ampboard}. Experimental validation of the preamplifier board is covered later in the paper.
 
 \begin{thesisfigure}{Circuit diagram and photo of built amplifier board}{ampboard}
 
 \includegraphics[width=0.48\linewidth]{ampboard_schematic.png} 
 \includegraphics[width=0.48\linewidth]{ampboard_photo.jpg}
 
-\end{thesisfigure}
-
-\begin{thesisfigure}{Measured preamplifier frequency response, compared to ideal component $+27\dB$ gain, $500\Hz$ first order LPF amplifier}{preampbode}
-\begin{tikzpicture}
-
-\begin{semilogxaxis}[
-        width=14cm, height=5cm,
-        xmin=10, xmax=10000,
-        ylabel={Magnitude [dB]},
-        grid=both,
-        legend pos=south west,
-        extra x ticks={500},
-        extra x tick label={500}
-    ]
-    \addplot[color=black, thick] table[x index=0, y index=3] {../data/preampbode.dat};
-    \addlegendentry{Measured}
-
-    \addplot[color=cyan, thick, dashed] table[x index=0, y index=1] {../data/preampbode.dat};
-    \addlegendentry{Ideal}
-\end{semilogxaxis}
-
-\end{tikzpicture}
-\begin{tikzpicture}
-
-\begin{semilogxaxis}[
-        width=14cm, height=5cm,
-        xlabel={Frequency [Hz]}, xmin=10, xmax=10000,
-        ylabel={Phase [deg]}, ymin=-90, ymax=0,
-        grid=both,
-        legend pos=south west,
-        extra x ticks={500},
-        extra x tick label={500},
-        ytick={0, -20, -45, -70, -90}
-    ]
-    \addplot[color=black, thick] table[x index=0, y index=4] {../data/preampbode.dat};
-    \addlegendentry{Measured}
-
-    \addplot[color=cyan, thick, dashed] table[x index=0, y index=2] {../data/preampbode.dat};
-    \addlegendentry{Ideal}
-
-    % Add a specific point with a label
-    \addplot[color=black, mark=*, mark size=3] coordinates {(500, -45)};
-    \node at (axis cs:500,-45) [anchor=south west] {$-45^\circ\text{ at }500\Hz$};
-\end{semilogxaxis}
-\end{tikzpicture}
 \end{thesisfigure}
 
 \subsubsection{Microcontroller}
@@ -770,29 +719,112 @@ ROS is for robotics, what about just doing some basic signal processing in pytho
 \todo{implement :)}
 
 \newpage
-\section{Results and validation (3pg)}
+\section{Results and validation}
 
-To test the performance of the system:
+\subsection*{Preamplifier module}
 
-- ECG is more difficult and as such a greater achievement. It has smaller amplitudes and very well-defined features, requiring more care all across the signal chain. 
-- EMG is the main goal of the project, but it is more forgiving, because:
-    - The signal has greater amplitude (about 10x? check both sources and experimental data!!!)
-    - The signal features are not as well defined and are usually modeled like noise for signal processing.
+We evaluate the designed preamplifier module's performance using two tests based on the ADALM2000 platform, which powers the module, generates test signals, and measures the amplified output.
 
-\todo{more :) :)}
+For the first test, a sinusoidal $A_{test} = 50\mV$ peak-peak test signal is applied. The measured waveform displays the expected DC bias of $\overbar{V_{amp}}=1.88\V$, and an amplitude of $A_{amp}=1.23\V$ peak-peak, giving an effective gain of $G = A_{amp} / A_{test} = 24.6$, just within the $10\%$ tolerance of the designed $G=22.45$, justifiable by the tolerances of the passive components we used. For these amplitudes, the harmonic distortion and amplifier noise are below the $-80\dB\text{FS}$ noise floor of the ADALM2000.
 
-\subsection{Usage for EMG}
+Secondly, we test the frequency response using the Network analyzer feature of the Scopy software\cite{scopy}. A $10\Hz - 10\kHz$ sine sweep is generated for the amplifier's input, and the resulting output is measured, determining both the magnitude and phase relation, which are plotted in figure \ref{fig:preampbode}. Both the measured magnitude and phase characteristics match the ideal frequency response well within the $10\%$ tolerances of the passives. For frequencies above $1\kHz$, the signal amplitude decreases to small multiples of the ADALM2000 resolution, leading to increasing amounts of quantization noise, which can be seen in both the magnitude plot as an increased reported magnitude, as well as in the phase plot as phase noise. This isn't concerning, as it is a limitation of the ADALM2000 used for the test setup, not the preamplifier board itself. More importantly, the desired amplification and corner frequency are validated.
 
-\todo{more :) :)}
+\begin{thesisfigure}{Measured preamplifier frequency response, compared to ideal component $+27\dB$ gain, $500\Hz$ first order LPF amplifier}{preampbode}
+\begin{tikzpicture}
 
-\subsection{Usage for ECG}
+\begin{semilogxaxis}[
+        width=14cm, height=5cm,
+        xmin=10, xmax=10000,
+        ylabel={Magnitude [dB]},
+        grid=both,
+        legend pos=south west,
+        extra x ticks={500},
+        extra x tick label={500}
+    ]
+    \addplot[color=black, thick] table[x index=0, y index=3] {../data/preampbode.dat};
+    \addlegendentry{Measured}
 
-\todo{more :) :)}
+    \addplot[color=cyan, thick, dashed] table[x index=0, y index=1] {../data/preampbode.dat};
+    \addlegendentry{Ideal}
+\end{semilogxaxis}
+
+\end{tikzpicture}
+\begin{tikzpicture}
+
+\begin{semilogxaxis}[
+        width=14cm, height=5cm,
+        xlabel={Frequency [Hz]}, xmin=10, xmax=10000,
+        ylabel={Phase [deg]}, ymin=-90, ymax=0,
+        grid=both,
+        legend pos=south west,
+        extra x ticks={500},
+        extra x tick label={500},
+        ytick={0, -20, -45, -70, -90}
+    ]
+    \addplot[color=black, thick] table[x index=0, y index=4] {../data/preampbode.dat};
+    \addlegendentry{Measured}
+
+    \addplot[color=cyan, thick, dashed] table[x index=0, y index=2] {../data/preampbode.dat};
+    \addlegendentry{Ideal}
+
+    % Add a specific point with a label
+    \addplot[color=black, mark=*, mark size=3] coordinates {(500, -45)};
+    \node at (axis cs:500,-45) [anchor=south west] {$-45^\circ\text{ at }500\Hz$};
+\end{semilogxaxis}
+\end{tikzpicture}
+\end{thesisfigure}
+
+\subsection*{Multi-channel EMG}
+
+With EMG signals above the circa $1\mV$ noise threshold of the max data rate conversions, measuring 16 single-ended channels can be done without using 16 preamplifier boards, albeit at a loss of signal quality. For evaluation, we do a 6 channel measurement on the inner forearm, targeting multiple muscles used in wrist and finger flexion, and do an exercise with both low effort and high effort movements, to observe both individual action potentials, as well as complex MUAPs. (figure \ref{fig:emgresult})
+
+\begin{thesisfigure}{6 Channel EMG measurement without preamplification, displaying an initial period of inactivity, a period of high effort movement (first box), and two individual action potentials during low effort movement (second and third boxes)}{emgresult}
+\includesvg[width=0.8\linewidth]{emg6}
+\end{thesisfigure}
+
+In the frequency domain, the highest signal component is $-73\dBV$ at $110\Hz$, and the noise floor is around $-85\dBV$, for an SNR of $12\dB$ without preamplification.
+
+\subsection*{Multi-channel ECG}
+
+As proof-of-concept for ECG, we set up a measurement for ECG Leads I (Right Arm - Left Arm), II (Right Arm - Left Leg), III (Left Arm - Left Leg), referenced to the Right Leg through the Driven Right Leg circuit. A 5 second measurement was taken without preamplification and filtered using the MATLAB Signal Processing Toolbox \texttt{lowpass} function.
+
+Because the ECG signal has a more restrained frequency composition, aggressive digital filtering can significantly help the signal quality. Before filtering, the noise floor lied around $-110\dBV$ and the lead II signal's peak was $-90\dBV$ at $13.5\Hz$ for an SNR of $20\dB$. After filtering, the noise floor dropped to $-160\dBV$ for an improved SNR of $70\dB$.
+
+\begin{thesisfigure}{ECG leads I, II, III measurement without preamplification}{ecgdemo}
+\includesvg[width=0.8\linewidth]{ecg3}
+\end{thesisfigure}
+
+\subsection*{Single-channel ECG}
+
+To demonstrate both the preamplifier and best ADC SNR, we measure a single channel ECG, using the V1 lead. The positive electrode is placed vertically between the 4th and 5th rib, $4\cm$ to the left of the sternum, and the negative electrode on the back of the patient, approximately symmetrical to the positive electrode relative to the heart. Signal quality is much better than without the preamplifier, with a signal peak of $-48\dBV$ at $2\Hz$ and noise floor at $-120\dBV$, for a digitally unprocessed SNR of $72\dB$, which is on par with high-performance commercial systems.
+
+\begin{thesisfigure}{Single channel ECG measurement of lead V1 with preamplifier stage}{rbbb}
+\includesvg[width=0.8\linewidth]{ecg1_rbbb}
+\end{thesisfigure}
+
+Of morbid curiosity, this ECG (figure \ref{fig:rbbb}) displays two R waves, the normal first peak, and a delayed and smoother R' wave $\sim 170\ms$ later, confirming the previously clinically diagnosed RBBB of the author. A healthy individual without RBBB would only show the first R wave as a peak, followed by the S wave as a valley, and no other features until the following heartbeat.
+
+\subsection*{EEG}
+
+While outside of the scope of this project, we attempted EEG measurements, inspired by OpenBCI's architecture which supports all three interchangably. Naive electrode placement and the much weaker nature of EEG signals meant there were no discernable features above the noise floor.
+
+\subsection*{LibIIO}
+
+The data for the previous plots in this section was recorded using iio-oscilloscope\cite{osc} which is based on libiio, and later processed and plotted in MATLAB. All relevant features function: selecting channels, assigning inputs to channels, querying DAQ parameters (sample rate, per-channel scale and offset); thus valing the libiio component of the project.
+
+\subsection*{ROS2}
+
+The maximum throughput case is when measuring $7-16$ channels with a total data rate of $10309\Hz$ divided between them. We test the ROS2 publisher node and monitor its output using plotjuggler\cite{plotjug} to successfully verify it can record and publish samples at this rate. A screenshot of the measured EMG is shown in figure \ref{fig:plotjuggler}.
+
+\begin{thesisfigure}{ROS2 Plot Juggler displaying measured and published 16 channel EMG at a per-channel data rate of $10309\Hz/16 = 644\Hz$}{plotjuggler}
+%\includegraphics[width=0.8\linewidth]{plotjuggler.png}
+\todo{here come the screenshot}
+\end{thesisfigure}
 
 \newpage
 \section{Conclusion (1-2pg)}
 
-We present a hardware + software solution for biopotential measurements of up to 16 single-ended or 8 differential channels, with \todo{specs}, intended for easy and affordable maintainability, using off-the-shelf components and open source hardware and software.
+We present a hardware + software solution intended for easy and affordable maintainability, using off-the-shelf components and open source hardware and software, capable of doing biopotential measurements of up to 16 single-ended or differential channels, with $>1000\Hz$ sample rates in all configurations. Differential measurements can be made directly or by use of a differential preamplifier module with a gain of $24$ and active low pass filtering ($500\Hz$). 
 
 \subsection{Future work}
 
