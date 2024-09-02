@@ -180,7 +180,7 @@ Scientific supervisor: \textbf{\@sutitle \space \@sufname \space \uppercase{\@su
 
 \begin{multicols}{2}
 \smallstyle{DEAN} 
-\smallstyle{\textbf{Prof.dr.ing. Liviu MICLEA}} 
+\smallstyle{\textbf{Prof.dr.ing. Vlad MUREȘAN}} 
 
 \smallstyle{HEAD OF AUTOMATION DEPARMENT} 
 \smallstyle{\textbf{Prof.dr.ing. Honoriu VĂLEAN}} 
