@@ -291,7 +291,7 @@ static int32_t iio_ad4114_exg_pre_enable(void *device, uint32_t mask)
             {
                 return ret;
             }
-            
+
             iio_dev->channel_offset[i] = k++;
             iio_dev->last_enabled_channel = i;
         }
@@ -356,64 +356,6 @@ int check_ad4114_ready(iio_ad4114_exg_dev *device)
     return 0;
 }
 
-// int AD4114_read_converted(ad717x_dev *dev, uint8_t *chan, uint32_t *data)
-// {
-//     // Start reading the data register directly. If not yet ready, the AD4114 will send back high bits even during the request byte. If after the request byte, we have received 0xff, then exit early with EAGAIN. Otherwise, a conversion result is ready, so read the whole register. 
-
-
-// 	// /** Buffer with data to send. If NULL, 0x00 will be sent */
-// 	// uint8_t			*tx_buff;
-// 	// /** Buffer where to store data. If NULL, incoming data won't be saved */
-// 	// uint8_t			*rx_buff;
-// 	// /** Length of buffers. Must have equal size. */
-// 	// uint32_t		bytes_number;
-// 	// /** If set, CS will be deasserted after the transfer */
-// 	// uint8_t			cs_change;
-// 	// /**
-// 	//  * Minimum delay (in us) between the CS de-assert event of the current message
-// 	//  * and the assert of the next one.
-// 	//  */
-// 	// uint32_t		cs_change_delay;
-// 	// /** Delay (in us) between the CS assert and the first SCLK edge. */
-// 	// uint32_t		cs_delay_first;
-// 	// /** Delay (in us) between the last SCLK edge and the CS deassert */
-// 	// uint32_t		cs_delay_last;
-
-//     char tx1[1] = { AD717X_COMM_REG_RD | AD717X_COMM_REG_RA(AD717X_DATA_REG) };
-//     char rx1[1] = { 0 };
-
-//     char tx2[5] = { 0 };
-//     char rx2[5] = { 0 };
-
-//     struct no_os_spi_msg request = {
-//         .tx_buff = tx1,
-//         .rx_buff = rx1,
-//         .bytes_number = 1,
-//         .cs_change = false
-//     }, read = {
-//         .tx_buff = tx2,
-//         .rx_buff = rx2,
-//         .bytes_number = 5, // 3 data, 1 status, 1 CRC
-//         .cs_change = true
-//     }, cancel = {
-//         .bytes_number = 1,
-//         .cs_change = true
-//     };
-
-//     no_os_spi_transfer(dev->spi_desc, &request, 1);
-//     if(rx1[0] & 1) // not ready yet
-//     {
-//         no_os_spi_transfer(dev->spi_desc, &cancel, 1);
-//         return -EAGAIN;
-//     }
-
-//     no_os_spi_transfer(dev->spi_desc, &read, 1);
-
-//     *chan = rx2[3] & 0xF;
-//     *data = (rx2[0] << 16) | (rx2[1] << 8) | rx2[2];
-//     return 0;
-// }
-
 #if false
 
 char irq_log[1025];
@@ -430,43 +372,6 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 {
     iio_ad4114_exg_dev *iio_dev = dev_data->dev;
     ad717x_dev *dev = iio_dev->dev;
-
-    // // uint32_t sz;
-    // // no_os_cb_size(dev_data->buffer->buf, &sz); // debug
-    // // num = sz;
-
-    // // Got a trigger -> check if any of the channels are readable
-
-    // // Check if RDY
-	// ad717x_st_reg *statusReg = AD717X_GetReg(dev, AD717X_STATUS_REG);
-	// if(!statusReg)
-    // {
-    //     // irq_log[++irq_log_idx] = 'E';
-    //     // if(irq_log_idx >= 1024) irq_log_idx = 0;
-        
-	// 	return -EINVAL;
-    // }
-
-    // int ret = AD717X_ReadRegister(dev, AD717X_STATUS_REG);
-    // if(ret < 0)
-    // {
-    //     // irq_log[++irq_log_idx] = 'E';
-    //     // if(irq_log_idx >= 1024) irq_log_idx = 0;
-
-    //     return ret;
-    // }
-    
-    // // irq_log[++irq_log_idx] = statusReg->value;
-    // // if(irq_log_idx >= 1024)
-    // // {
-    // //     irq_log_idx = 0;
-    // // }
-    
-    // // RDY bit is 0 if new data available
-    // if(statusReg->value & AD717X_STATUS_REG_RDY)
-    // {
-    //     return 0;
-    // }
 
     int ret = check_ad4114_ready(iio_dev);
     if(ret == -EAGAIN)
@@ -520,7 +425,6 @@ static int32_t iio_ad4114_exg_trigger_handler(struct iio_device_data *dev_data)
 }
 
 // Device definition
-
 struct iio_attribute iio_ad4114_exg_attributes[] = {
     { .name = "sampling_frequency",           .priv = 0, .shared = IIO_SEPARATE,      .show = (attr_handler*) iio_ad4114_exg_get_sampling_frequency, .store = 0 },
     { 0 } // Terminates the list
