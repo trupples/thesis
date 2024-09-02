@@ -60,6 +60,7 @@
 \newcommand{\dB}{\unit{\deci\bel}}
 \newcommand{\dBV}{\unit{\deci\bel\volt}}
 \newcommand{\uF}{\unit{\micro\farad}}
+\newcommand{\mA}{\unit{\milli\ampere}}
 
 % Signal names
 \newcommand{\drdy}{{\ensuremath{\mathtt{DOUT/}\overline{\mathtt{RDY}}}}}
@@ -596,7 +597,7 @@ The project SHOULD:
     \item Allow per-channel \textbf{configurability of differential / single-ended measurements}
     \item Provide active \textbf{Right Leg Drive}
     \item Measure with \textbf{at least $1000\Hz$ sample rate}, ideally a power of two ($1024, 2048$) for "round" FFT bins of $1, 0.5\Hz$
-    \item \textbf{1uV precision}
+    \item Measure with \textbf{1uV precision}
 \end{itemize}
 
 Lastly, some guiding principles are cost reduction, utilisation as an educational tool, modularity (decoupled hardware - firmware - software), and use of Analog Devices parts, to be later usable as a product demo.
@@ -724,10 +725,34 @@ The overall circuit diagram and a picture of the built amplifier board are prese
 
 \begin{thesisfigure}{Circuit diagram and photo of built amplifier board}{ampboard}
 
-\includegraphics[width=0.48\linewidth]{ampboard_schematic.png} 
-\includegraphics[width=0.48\linewidth]{ampboard_photo.jpg}
+\includegraphics[width=0.45\linewidth]{ampboard_schematic.png} 
+\includegraphics[width=0.45\linewidth]{ampboard_photo.jpg}
 
 \end{thesisfigure}
+
+\newpage
+\subsubsection{Driven Right Leg circuit}
+
+Because the ADC and measured patient can be considered to be practically galvanically isolated (very high impedance between them), it is important to have a well defined potential difference between them, or else measurement circuitry doesn't work. In the case of the AD8226 based preamplifier board, the common-mode voltage of its inputs must be between $0.7+3\V$ for its output to have the full rail-to-rail range. The AD4114 is more forgiving, with an input range of $\pm 20\V$, but it still requires a common reference.
+
+To achieve this, we build another buffered voltage divider circuit, with a $10\kohm - 20\kohm$ divider producing approximately $5\V \cdot (20/30) = 3.33\V$ and a common collector buffer which drops the voltage down to $3.33\V - 0.7\V \approx 2.63\V$ but can strongly drive it. A $1\kohm$ emitter resistor means this circuit can sink up to $2.63\mA$, which is more than enough for this purpose.
+
+The $2.63\V$ above analog ground bias voltage applied to the patient brings common mode voltages all across the body in an acceptable range for both the AD8226 preamplifier board and the AD4114 ADC.
+
+The active nature of the DRL circuit means it actively cancels out coupled powerline noise and baseline wander, as illustrated in figure \ref{fig:drlsig}. This is opposed to passive referencing to ground, which in our experiments mitigated powerline noise but not baseline wander.
+
+\begin{thesisfigure}{Measured differential EMG with no reference (blue), passive referencing to ground (yellow), active DRL (red)}{drlsig}
+\includesvg[width=0.7\linewidth]{drl}
+\end{thesisfigure}
+
+The circuit schematic for the Driven Right Leg circuit and a photo of its implementation are shown in figure \ref{fig:drlphoto}.
+
+\begin{thesisfigure}{Schematic of DRL circuit (left) and built DRL circuit (right)}{drlphoto}
+\includegraphics[width=0.48\linewidth]{drlsch.png}
+\includegraphics[width=0.48\linewidth]{drlphoto.jpg}
+\end{thesisfigure}
+
+\newpage
 
 \subsubsection{Microcontroller}
 
@@ -865,34 +890,38 @@ With the AD4114 in continuous conversion mode, two trigger sources are available
 
 To compute a suitable interval for the polling frequency $f_p$ it is trivial that $f_p \geq \text{ODR} = 10309\Hz$. Additionally, we cannot poll faster than it takes to do the polling itself, which is an SPI transfer of 2 bytes (1 request byte, 1 response byte with the status register), amounting to $T = 2 \cdot 10 / f_{SPI} = 4\us$ and limiting $f_p \leq 250\kHz$. There is no use in polling orders of magnitude faster than samples become available, so we settle for polling at around $1.5\times$ the sampling ratio, with $f_p = 16000\Hz$. In the highest data rate scenario, we will have a sample available every $16000/10309 \approx 1.55$ polls on average. In the lowest data rate scenario, this number rises to $16000/1007 \approx 15.89$ polls per sample.
 
-The regularly timed polling is done by using an IIO hardware trigger based on a timer IRQ. When any channels are active, the timer IRQ is enabled by the underlying IIO implementation and its handler can poll, get data, and store it in a buffer to be sent to the host later. Besides the time required for communication, storing the samples should also be done as quickly as possible to not take up microcontroller execution time. In our implementation, this is done by just a single 32 bit store in a static sample buffer. When the sample buffer is full (i.e. all channels have stored one value), it is submitted to the no-OS IIO implementation via a call to \texttt{iio\_buffer\_push\_scan}. A shortened implementation of the trigger / IRQ handler follows:
+The regularly timed polling is done by using an IIO hardware trigger based on a timer IRQ. When any channels are active, the timer IRQ is enabled by the underlying IIO implementation and its handler can poll, get data, and store it in a buffer to be sent to the host later. Because of the stateless nature of these interrupt requests, we must add extra logic to remember "how far along" the buffer each channel is. For this, at the beginning of the acquisition, we compute a per-channel pointer into the buffer, representing consecutive positions for the enabled channels:
 
 \begin{lstlisting}[language=C]
-trigger_handler(struct iio_device_data *dd)
+iio_dev->last_enabled_channel = -1;
+int k = 0;
+for(int i = 0; i < 16; i++)
 {
-    // 2 byte SPI transfer to poll if a sample is ready
-    int ret = check_ad4114_ready(dev);
-    if(ret == -EAGAIN) return 0;
-
-    AD717X_ReadData(adc, &data);
-
-    // Data contains status register as well:
-    int8_t status = data & 0xff;
-    int8_t channel = status & 0xf;
-    data = data >> 8; // actual measurement is only the first 3 bytes
-
-    dev->sample_buf[dev->channel_offset[channel]] = data;
-    
-    // Got a full sample of all channels
-    if(channel == dev->last_enabled_channel)
-        iio_buffer_push_scan(dd->buffer, dev->sample_buf);
+    if(mask & NO_OS_BIT(i)) { // channel i is enabled
+    {
+        ad717x_assign_setup(dev, i, k%8);
+        iio_dev->channel_offset[i] = k++;
+        iio_dev->last_enabled_channel = i;
+    }
 }
 \end{lstlisting}
 
+The \texttt{last\_enabled\_channel} value is useful in determining when the channel sequencer rolls over from the last channel to the first. Besides the time required for communication, storing the samples should also be done as quickly as possible to not take up microcontroller execution time. In our implementation, this is done by just a single 32 bit store in a static sample buffer. When successfully polling and reading a new sample, its value is stored in the sample buffer in the correct position based on the previously computed channel offset, and a check of whether the sample buffer is full and ready to submit (i.e. the last sequenced channel has just been read) is done:
 
+\begin{lstlisting}[language=C]
+// part of the poll timer interrupt:
+status = data & 0xff;
+channel = status & 0xf;
+data = data >> 8; // remove status least significant byte
 
-
-
+iio_dev->sample_buf[iio_dev->channel_offset[channel]] = data;
+    
+// Got a full sample of all channels, push it to the buffer
+if(channel == iio_dev->last_enabled_channel)
+{
+    iio_buffer_push_scan(dev_data->buffer, iio_dev->sample_buf);
+}
+\end{lstlisting}
 
 % \subsubsection{Digital filtering of the signal}
 
@@ -918,7 +947,9 @@ trigger_handler(struct iio_device_data *dd)
 
 \subsubsection{LibIIO}
 
-With a working serial IIOD device, we can connect to it with any LibIIO compliant application. For instance, \texttt{iio\_info} provided by the \texttt{libiio-tools} package can display the structure of described IIO context, with the context-device-channel hierarchy, their specific attributes, and channel specifications:
+With a working serial IIOD device developed in the previous section, we can connect to it with any LibIIO compliant application without requiring further development.
+
+For instance, \texttt{iio\_info} provided by the \texttt{libiio-tools} package can display the structure of described IIO context, with the context-device-channel hierarchy, their specific attributes, and channel specifications:
 
 \begin{verbatim}
 $ iio_info -u serial:/dev/ttyACM0,500000
@@ -948,7 +979,7 @@ For most of the hardware and firmware development, we used \texttt{iio-oscillosc
 
 \subsubsection{Python wrapper class}
 
-For programatic interaction with the device, we create a Python 3 package defining a device class that exposes functionality for connecting to a device, configuring its channels and starting acquisition, receiving samples, and stopping acquisition.
+For programatic interaction with the device, we create a Python 3 package defining a device class that exposes functionality for connecting to the device, configuring its channels, starting acquisition, receiving samples, and stopping acquisition.
 
 We extend the \texttt{pyadi-iio} library, which is itself a wrapper around the \texttt{pylibiio} bindings for \texttt{libiio}. While the bindings themselves would suffice, they expose low level libiio details which are unnecessary for this project. An example snippet of how this package can be used is presented:
 
@@ -972,20 +1003,53 @@ for i in range(100):
     print(window)
 \end{lstlisting}
 
-Within \texttt{pyadi-iio}, common ADC and DAC functionality is clustered into the \texttt{tx}, \texttt{rx}, and the merged \texttt{tx\_rx} classes. Additionally, connecting to a LibIIO context is done via the \texttt{context\_manager} class. Taking from other ADC implementations, we define a device class inheriting from \texttt{rx} and \texttt{context\_manager}. 
-
-The most relevant library functions we use are:
+Within \texttt{pyadi-iio}, common ADC and DAC functionality such as channel selection, buffer creation, buffer transfers, are clustered into the \texttt{tx}, \texttt{rx}, and \texttt{tx\_rx} classes, which most devices inherit from. Additionally, connecting to a LibIIO context is done via the \texttt{context\_manager} class. The most relevant library functions we use are:
 \begin{itemize}
     \item \texttt{\_set\_iio\_attr} and \texttt{\_get\_iio\_attr} for reading and writing device and channel attributes, such as the selected inputs
     \item \texttt{rx\_buffer\_size} for controlling the size of received buffers. Larger buffer sizes result in rarer and bulkier transfers (within the limits of the firmware buffer), and smaller buffer sizes result in having transfers happen more often with smaller payloads. We set a size of $16$ samples / transfer for an estimated $1000\Hz / 16 \approx 60\Hz$ buffer transferrate.
     \item \texttt{rx\_enabled\_channels} selects enabled channels and starts data acquisition upon being written to
 \end{itemize}
 
-Overall, given the amount of logic implemented "behind the scenes" by \texttt{pyadi-iio}, our final device implementation is mostly boilerplate code.
+Taking from other ADC implementations, we define a device class \texttt{ad4114exg\_iio} inheriting from \texttt{rx} and \texttt{context\_manager}. The class constructor is largely boilerplate for the proper initialization of the \texttt{rx} superclass. Further, we define the channel structure using a nested \texttt{\_channel} class describing the available attributes:
+
+\begin{lstlisting}[language=Python]
+class _channel(attribute):
+    def __init__(self, ctrl, channel_name):
+        self.name = channel_name
+        self._ctrl = ctrl
+
+    @property
+    def raw(self):
+        return self._get_iio_attr(self.name, "raw", False)
+
+    @property
+    def scale(self):
+        return float(self._get_iio_attr(self.name, "scale", False))
+
+    @property
+    def offset(self):
+        return float(self._get_iio_attr(self.name, "offset", False))
+\end{lstlisting}
+
+The most important part of the wrapper class is the channel configuration and acquisition start function. It takes an array of strings as a parameter, representing one of the 34 available channel inputs (e.g. "VIN3-VINCOM"). For a provided array of $N$ input strings, the \texttt{start} function assigns them in order to channels $0\dots N-1$ and enables these first $N$ channels. The buffer size is set to $16$ samples/channel/buffer, equating to roughly $1000\Hz/16 = 62.5$ transferred buffers per second, with variation depending on the exact data rate imposed by the number of channels. 
+
+\begin{lstlisting}[language=Python]
+def start(self, inputs):
+    for i, inp in enumerate(inputs):
+        self._set_iio_attr(f"voltage{i}", "input", False, inp)
+
+    nchan = len(inputs)
+    self.rx_buffer_size = 16
+    self.rx_enabled_channels = list(range(nchan))
+\end{lstlisting}
+
+Overall, given the amount of logic implemented "behind the scenes" by \texttt{pyadi-iio}, creating this functional wrapper required minimal coding, with more than half of the file being boilerplate.
 
 \subsubsection{ROS2 environment}
 
-Before developing the ROS2 node, we first prepare a docker environment so that this software may be runnable on any linux distribution. Based on the OSRF ROS2 iron image, we further install libiio packages, python pip, plotjuggler, and the pyadi-iio python package. The dockerfile is minimal but sufficient:
+While not being a distribution in and of itself, ROS and ROS2 are notorious for low interoperability distributions other than the officially supported ones. When working with ROS2, it is most practical to use a virtual machine or container to isolate the ros2 environment from the host linux distribution, as package version mismatches make it very difficult to run otherwise.
+
+For this project, we prepare a docker environment so that this software may be runnable on any linux distribution. Based on the OSRF ROS2 iron image, we further install libiio, plotjuggler, and the pyadi-iio python package. The following dockerfile is minimal but sufficient:
 
 \begin{lstlisting}
 FROM osrf/ros:iron-desktop-full
@@ -1000,7 +1064,7 @@ RUN python3 -m pip install pyadi-iio
 WORKDIR /ros2_ws
 \end{lstlisting}
 
-We build the dockerfile and instantiate a container of it with an interactive terminal (\texttt{-it}), load the ros environment, and then run any wanted ros2 commands:
+We build a container image and instantiate it with an interactive terminal (\texttt{-it}), load the ros environment, and then run any wanted ros2 commands:
 
 \begin{verbatim}
 $ cd thesis/software
@@ -1016,7 +1080,7 @@ action_tutorials_interfaces
 
 In the previous commands, we mounted the project's software workspace (\texttt{-v .:/ros2\_ws}) and the \texttt{/tmp/.X11-unix} file to enable X11 forwarding for ROS2 GUI apps such as plotjuggler.
 
-Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} defining application-specific messages, \texttt{ad4114exg\_publisher} containing the publisher node, and copy the previous iio wrapper to \texttt{ad4114exg\_iio}. The first uses the \texttt{ament-cmake} build system, to allow for message definitions, while the other two use \texttt{ament-python}:
+Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} defining application-specific messages, \texttt{ad4114exg\_publisher} containing the publisher node, and copy the previous \texttt{pyadi-iio} wrapper to \texttt{ad4114exg\_iio}. The first package uses the \texttt{ament-cmake} build system, to allow for message definitions, while the other two use \texttt{ament-python}:
 
 \begin{verbatim}
 # ros2 pkg create --build-type ament_cmake ad4114exg_interfaces
@@ -1025,8 +1089,7 @@ Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} 
 \end{verbatim}
 
 \newpage
-
-\subsubsection{ROS2 publisher node}
+\subsubsection{ROS2 implementation}
 
 The chosen data format for biopotential measurements is a timestamped float32, defined as the message \texttt{ExgSample.msg}:
 
@@ -1035,9 +1098,9 @@ std_msgs/Header header
 float32 value
 \end{lstlisting}
 
-While the header field adds a small size overhead, it helps with consistency and interoperability with other ROS2 projects, it being the de facto standard to timestamp messages. For instance, plotjuggler assumes timestamped data to have a \texttt{header.stamp} field.
+While the header field adds a small size overhead due to the unused frame id, it helps with consistency and interoperability with other ROS2 projects, it being the de facto standard to timestamp messages. For instance, plotjuggler assumes timestamped data to have a \texttt{header.stamp} field.
 
-Because of Docker limitations, we cannot easily and reliably communicate with the device via serial from within the container. Thankfully, libiio's transport layer agnostic nature means we can still make a connection between a ROS2 node and the device by launching iio daemon on the host and connecting to it from the container over TCP.
+Communication with the serial device is made difficult by the fact that the ros2 iron distribution's package library refers to an older version of libiio which doesn't support the serial backend. Thankfully, libiio's transport-layer-agnostic nature means we can still make a connection between the ROS2 node and the device by launching iio daemon on the host to act as a middleman between the serial device and the ROS2 container, communicating over TCP as a networked iio context.
 
 Building on top of the libiio wrapper class, we develop a ROS2 node that communicates with the iio daemon, buffering incoming data, and regularly publishes it to the ROS2 network. Because these two are implicitly asynchronous and may happen at differing rates, they must be separated into two threads, communicating via a synchronized FIFO.
 
@@ -1064,7 +1127,13 @@ class AD4114ExgPublisher(Node):
             self.publisherz[channel].publish(msg)
 \end{lstlisting}
 
-Concurrently, the iio thread connects to the iio daemon, receives samples in blocks, assigns linearly interpolated timestamps, and pushes them to the common buffer:
+Concurrently, the iio thread connects to the iio daemon, receives samples in blocks, and pushes them to the common buffer. Because of the chunked and blocking nature of libiio buffer transfers, it would be unrepresentative of the data to assign all samples the timestamp of their arrival or request. Similarly, we cannot dead reckon based on the expected sample rate because of the significant $\pm 2.5\%$ accuracy of the AD4114 internal clock. As such, we decided to better trust the host computer's clock and use Python's \texttt{time.time()} function, which is documented to use the most precise available clock source. To compute the individual sample timestamps, we linearly interpolate between the timestamp at the end of the previous and current received buffers. If the previous buffer was fully received at time $t_0$ (at which point the current buffer started being acquired) and the current buffer at time $t_1$ and the buffers have $N$ samples, the timestamp of the $k$-th sample is estimated as:
+
+\begin{thesisequation}{linterp}
+    t[k] = t_0 + \frac{(t_1 - t_0) \cdot k}{N},\quad k = 0 \dots N-1
+\end{thesisequation}
+
+A simplified version of the receive thread code (not handling edge cases) is as follows:
 
 \begin{lstlisting}[language=Python]
 def receive_thread(self, channels):
