@@ -1,11 +1,38 @@
 \documentclass{thesis}
 
 \usepackage[inkscapeformat=png]{svg}
+\usepackage{dirtree}
 \usepackage{siunitx}
 \usepackage{tikz}
-\usepackage{circuitikz}
+\usepackage[european]{circuitikz}
 \usepackage{pgfplots}
+\usepackage{listings}
 \usetikzlibrary {positioning,fit,calc,shapes.geometric}
+
+% ayu color scheme, with clear background
+\definecolor{ayueditorfg}{rgb}{0.36,0.38,0.4}
+\definecolor{ayucomment}{rgb}{0.67,0.68,0.69}
+\definecolor{ayukeyword}{rgb}{0.98,0.55,0.24}
+\definecolor{ayustring}{rgb}{0.52,0.7,0}
+
+\lstdefinestyle{ayu}{
+    commentstyle=\color{ayucomment},
+    keywordstyle=\color{ayukeyword},
+    stringstyle=\color{ayustring},
+    basicstyle=\ttfamily\color{ayueditorfg},
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=4
+}
+
+\lstset{style=ayu,basicstyle=\normalsize\ttfamily}
+
 
 \newcommand{\todo}[1]{{\color{red}TODO: #1}}
 
@@ -22,6 +49,7 @@
 \newcommand{\nV}{\unit{\nano\volt}}
 \newcommand{\Hz}{\unit{\hertz}}
 \newcommand{\kHz}{\unit{\kilo\hertz}}
+\newcommand{\MHz}{\unit{\mega\hertz}}
 \newcommand{\ms}{\unit{\milli\second}}
 \newcommand{\us}{\unit{\micro\second}}
 \newcommand{\cm}{\unit{\centi\meter}}
@@ -48,15 +76,17 @@
 
 In electrophysiology, two prevalent modes of biopotential measurements are electrocardiography (ECG) and electromyography (EMG), measuring cardiac muscle potentials and skeletal muscle potentials respectively. While methods that use intracellular electrodes exist and are much more precise, using surface electrodes is very common thanks to their non invasive nature, albeit at a loss of spatial specificity due to them being limited to measuring a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions. On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
 
-Robot Operating System (ROS) is an open-source software framework for robotic applications, most importantly providing a flexible communication system ("the plumbing") that allows for real-time message-passing between networked nodes.\cite{ros} In practice, these nodes can be any component of the larger robotic system, be them anything from a discrete piece of hardware to a software component. Nodes communicate by sending messages, which can have varying levels of complexity, from primitives to nested aggregated structures, via "topics" which implement publish/subscribe semantics. In our application, the biopotential DAQ node can expose topics on which it publishes measured samples, for any other node to subscribe to for further signal processing.
+Robot Operating System (ROS) is an open-source software framework for robotic applications, providing various mechanisms of interacting with hardware, but most importantly providing a flexible communication system ("the plumbing") that allows for real-time message-passing between networked nodes.\cite{ros} In practice, these nodes can be any component of the larger robotic system, be them anything from a discrete piece of hardware to a software component. Nodes communicate by sending messages, which can have varying levels of complexity, from primitives to nested aggregated structures, via "topics" which implement publish/subscribe semantics. In our application, the biopotential DAQ node can expose topics on which it publishes measured samples, for any other node to subscribe to for further signal processing.
 
 The Linux Industrial I/O (IIO) subsystem was created in 2008 and mainlined in 2012 (\href{https://github.com/torvalds/linux/commit/06458e277eac2b8761b0a04d3c808d57be281a2e}{commit \texttt{06458e2}}) to provide a simple and unified way to interact with devices with ADC or DAC capabilities, broadly ranging from plain ADC/DAC chips to Inertial Measurement Units (Accelerometers, Gyroscopes, Magnetometers), Software Defined Radio, robotic actuators and sensors, and more. Within the Linux kernel, it fills in a gap between the \textit{input} subsystem which can stream user input data and the \textit{hwmon} subsystem used for monitoring and controlling hardware state such as CPU temperature and fan settings, albeit with low refresh rate. The IIO subsystem provides a modular way to define high bandwidth communication with input/output devices directly connected to the host via SPI or I2C and specified as part of the device tree. Despite the subsystem's name, it is not limited to industrial production applications: IIO usage is ubiquitous in today's linux-based devices for integrating features such as accelerometers, gyroscopes or ambient light sensors in a uniform way, besides other hardware abstraction layers.
 
-\textit{Libiio} is a library which provices cross-platform functionality for interacting with both local and remote IIO devices within the same framework. To accomplish this, it implements the IIO Daemon (IIOD) for which it defines the \textit{IIOD protocol}. The current version of the IIOD protocol (v0.1) is based on a set of human readable commands sent via a single data stream of alternating client requests and server responses. This allows the same protocol to be used over a variety of transport layers, officially Serial (most relevant for this application), USB and TCP.
+\textit{Libiio} is a software library which provices cross-platform functionality for interacting with both local and remote IIO devices, within the same framework. To accomplish this, it implements the IIO Daemon (IIOD) for which it defines the \textit{IIOD protocol}. The current version of the IIOD protocol (v0.1) is based on a set of human readable commands sent via a single data stream of alternating client requests and server responses. This allows the same protocol to be used over a variety of transport layers, officially Serial (most relevant for this application), USB and TCP.
 
 Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
 
 We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS2 and LibIIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS2 and LibIIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts. An overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
+
+Further on, we mainly focus on the electrical and firmware signal chain design and implementation, with lightweight but sufficient software wrappers for interacting with the final system through: libiio, a python library, and a ROS2 publisher node, respectively.
 
 \begin{thesisfigure}{Overview of information flow}{flow}
 \begin{tikzpicture}[
@@ -117,6 +147,7 @@ We aim to fill this gap and provide an affordable and easily maintainable hardwa
     \node (lib) [component, below=18mm of iod] { LibIIO };
     \node (pyt) [component, right=5mm of lib] { Python bindings };
     \node (rem) [below=15mm of lib.west,anchor=west] { Remote LibIIO instance };
+    \node (app) [right=5mm of rem] { Local Python app };
 
     \path [<->, draw, thick]
         (iod) edge node [very near start, right, anchor=north west] {Serial over USB} (lib)
@@ -128,8 +159,8 @@ We aim to fill this gap and provide an affordable and easily maintainable hardwa
 
     \path [<->, draw, thick]
         (pyt) edge (ros)
-        (ros) edge (net);
-
+        (ros) edge (net)
+        (pyt) edge (app);
 
     \node [fit={(ros) (pyt) ([yshift=1.5em]lib.north west)},system,label={[text=black!40,anchor=north]north:Software running on host}] {};
 \end{tikzpicture}
@@ -168,11 +199,30 @@ Surface measurements have worse spatial resolution and cannot precisely pinpoint
 
 While the internal mechanisms of muscle contractions are similar between cardiac and skeletal muscle, their external activation strategies vary almost entirely. Cardiac muscle isn't divided into motor units and as such heartbeat strength cannot be modulated by recruitment, but rather by various chemical and mechanical factors that ultimately increase or decrease the availability of $\text{Ca}^{2+}$ ions, such as but not limited to: the Frank-Starling mechanism (which aids in stroke volume regulation), or hormone effects from secretion of adrenaline or norepinephrine.
 
-Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. \todo{FIGURE} Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
+Contrasted to the usual sEMG measurement, all healthy heartbeats have a clearly identifiable structure consisting of a P wave, the QRS complex, and a T wave. (figure \ref{fig:ecg_pqrst}) Cardiac conditions can be characterized and diagnosed by these features' timing, but their electrical characteristics are very well defined, especially when compared to the noisy-looking MUAP superposition seen during skeletal muscle contraction.
 
-Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. \todo{FIGURE illustrating cardiac dipole model}
+\begin{thesisfigure}{Healthy heartbeat electrical signature displaying P wave, QRS complex, T wave. Adapted from Anthony Atkielski under the CC0 / Public Domain license.}{ecg_pqrst}
+\includesvg[width=0.4\linewidth]{ecg_pqrst}
+\end{thesisfigure}
+
+Another main difference between sEMG and ECG is electrode placement. While for sEMG we are interested in getting the electroces as close as possible to the muscle of interest to avoid confusion with other sources of electrical activity, ECG focuses on large scale electric field gradients that appear in the body as a result of a heartbeat. In essence, both the amplitude and "direction" of depolarization and repolarization can be determined by measuring potential differences across a patient's extremities. Localized contractions of cardiac muscle can be identified by the electric field disturbances they create even tens of centimeters away, bypassing the need to have electrodes as close as possible to the heart. All of this is possible in ECG but not EMG because of the very strong electrical impulses created by the heart, as well as their regular, non-superimposed structure. Various features of the heart's electrical activity can be identified by the directional characteristics of the potential induced in the body, making electrode placement very important for proper ECG.
+
+Over time, conventional electrode layouts for ECG have been developed, aiming to measure well defined features of the heart's function. The standard ECG setup is the 12 lead system, in which 10 electrodes: RA (Right Arm), LA (Left Arm), RL (Right Leg, usually used as an active electrical reference through "Right Leg Drive"), LL (Left Leg), and the "precordial" V1-V6 electrodes placed in a line arrangement on the chest. From these, 12 electrical potentials (the "leads") are defined and used for ECG diagnosis:\cite{Meek2002}
+\begin{itemize}
+    \item Lead I, measured as the differential $\text{I} = LA - RA$
+    \item Lead II, measured as the differential $\text{II} = LL - RA$ (coloquially recognized as "the" heart beat signal)
+    \item Lead III, measured as the differential $\text{III} = LL - LA$
+    \item Augmented vector Right, measured as the differential between $RA$ and the short-circuited $LA$ and $LL$: $\text{aVR} = RA - (LA+LL)/2$
+    \item Augmented vector Left, measured as the differential between $LA$ and the short-circuited $RA$ and $LL$: $\text{aVL} = LA - (RA+LL)/2$
+    \item Augmented vector Foot, measured as the differential between $LL$ and the short-circuited $RA$ and $LA$: $\text{aVF} = LL - (RA+LA)/2$ 
+    \item 6 precordial leads (V1-V6, measured as single-ended signals (referenced to $RL$, for example, but not necessarily)
+\end{itemize}
+
+While the augmented leads' signals could be derived from the first three leads in an ideal system, noise considerations make it much more practical to short circuit the averaged leads and thus average their potentials by virtue of the created electrical voltage divider.
 
 \subsection{Electronics for biopotential measurement}
+
+In essence, biopotential measurements use mechanisms similar to any other electrical time series measurements, but extra design considerations must be taken into account because of the poor electrical characteristics of human bodies (high resistance, parasitic capacitance, easy coupling to nearby interference sources), as well as for patient safety.
 
 \subsubsection{Biopotential measurement modes}
 
@@ -269,13 +319,13 @@ Chemically, the $\text{AgCl}$ layer partially decomposes into $\text{Ag}^+$ and 
 
 Because of their prevalence, Ag/AgCl electrodes are inexpensive and easily obtainable from general medical suppliers. Additionally, \cite{Lee2022} presents 3 methods for fabricating dry Ag/AgCl electrodes, which can be implemented even in small scales and using cheap materials, were these not commercially available.
 
-The state of the art are conductive polymer PEDOT:PSS electrodes, thanks to their great mechanical, electrical, and chemical properties: They adhere and conform to skin, are flexible, self-healing, and have good biocompatibility, only falling behind the classic Ag/AgCl electrodes in terms of contact impedance, yet still being conductive enough for biopotential readings. \cite{Seiti2023,Hou2024}
+The state of the art are conductive polymer PEDOT:PSS electrodes, thanks to their great mechanical, electrical, and chemical properties: They adhere and conform to skin, are flexible, self-healing, and have good biocompatibility, only falling behind the classic Ag/AgCl electrodes in terms of contact impedance, yet still being conductive enough for biopotential readings. They are not commonly available commercially. \cite{Seiti2023,Hou2024}
 
 \subsection{Market research}
 
 Biopotential measurements are no new subject and many products already exist both in the academic and commercial fields. All are subject to engineering tradeoffs between parameters such as number of channels, sample rate, precision, noise, electrode types, etc., making each better suited to a certain use case. To the best of our research, there is no universal, modular and extensible solution to the problem of biopotential measurements. Further on, we overview some representative options for EMG / ECG DAQ systems:
 
-\subsection*{OpenBCI}
+\subsubsection*{OpenBCI}
 
 The OpenBCI ("Open Brain-Computer Interface") project started in 2013 and provides open source boards mainly intended for EEG measurements, but which are also applicable for EMG and ECG. These have underwent a handful of revisions in the last decade, and the current generation consists of:
 
@@ -287,26 +337,23 @@ The OpenBCI ("Open Brain-Computer Interface") project started in 2013 and provid
 
 While the retail price on the OpenBCI store is steep, design files are provided for all products and they can be ordered and indivually built for a fraction of the cost. If built based on the schematics, the bulk of the cost will be the ICs, which add up to around 100 Euro (estimate as of 2024-08).
 
-\subsection*{ASPEN}
+\subsubsection*{ASPEN}
 
-\cite{Esposito2018}
+ASPEN\cite{Esposito2018} is a project with very similar goals to ours, developed as a PhD thesis at Stanford University, with excellent results, but much more complex than an undergraduate thesis. It is a general-purpose mixed-signal educational system consisting of Arduino shield form-factor boards for filtering, ADC, DAC, DSP, which are then applied to biopotential measurements. The ASPEN paper also contains educational laboratory exercises and didactic materials for teaching mixed-signal design applied to biopotentials.
 
-What we're doing, but better, but a PhD thesis.
+We aim to design a more minimal system instead of just adapting this, to also comply with the recommendation of using Analog Devices parts.
 
-\todo{more :)}
-
-
-\subsection*{Quanser QNET Myoelectric board}
+\subsubsection*{Quanser QNET Myoelectric board}
 
 The Quanser QNET Myoelectric trainer board is a closed-source, one channel addon board for the National Instruments Elvis II. It provides a fixed amplification stage of  powered by a battery to remove power supply noise, and further uses the ELVIS' oscilloscope channel for analog to digital conversion. Its signal chain consists of an overall gain of $300$, and first order LPF and HPF limiting the bandwidth to $20-500\Hz$.
 
 Anecdotally, this is the board that sparked the idea for this project, as it is one of the experimental boards given to TUCN students.  It depends on the NI Elvis, only has one channel measurements, and is not open source. This makes it a good educational resource, but it falls short on both performance and cost.
 
-\subsection*{BioWare EXG Pills}
+\subsubsection*{BioWare EXG Pills}
 
 As one of the cheapest related products, the EXG Pill is an open source instrumentation amplifier board meant to aid in biopotential data acquisition by connecting it to another device with an ADC, typically an Arduino board. It is available for order on the creator's online shop, but being an open hardware project allows anyone to manufacture their own, to specification. It is not an entire DAQ system, but rather just the amplification stage.
 
-\subsection*{Cometa Pico EMG, Delsys Tringo}
+\subsubsection*{Cometa Pico EMG, Delsys Tringo}
 
 As one of the most polished products on the market, the Cometa Pico EMG and Delsys Tringo are two competing multi-channel wireless EMG DAQ systems.
 
@@ -316,7 +363,7 @@ The Delsys Tringo has a more flexible system with a range of different sensor ty
 
 On the other hand, being high-end commercial medical products, both systems cost orders of magnitude more than what we aim for (\cite{delToro2019} estimates 15000 Euro for the Cometa and 20000 Euro for the Delsys) and neither abide by the open source philosophy.
 
-\subsection*{MyoWare}
+\subsubsection*{MyoWare}
 
 Advancer Technologies's line of MyoWare products started out in 2015 with their first generation MyoWare muscle sensor, which similarly to the BioWare EXG Pills described above, only provided the analog signal chain consisting of isolation, an adjustable amplifier and filtering, requiring an external ADC, with the Arduino Uno being recommended for small projects. The current generation has adjustable gain between $?-200$ and a bandpass filter between $20-500\Hz$.\cite{myoware}
 
@@ -336,7 +383,7 @@ For a rough estimate of the order of magnitude of thermal noise in our biopotent
 \overline{V_n^2} = 4k_BTR\Delta f \approx 0.02977 \uV^2
 \end{thesisequation}
 
-Which can alternatively be interpreted as having an RMS noise of $\sqrt{0.02977 \uV^2} \approx 172.5 \nV$ or a noise density of $\sqrt{4k_BTR} = 7.716 \nV/\sqrt{\Hz}$. 
+Which can alternatively be interpreted as having an RMS noise of $\sqrt{0.02977 \uV^2} \approx 172.5 \nV$ or a noise density of $\sqrt{4k_BTR} = 7.716 \nV/\sqrt{\Hz}$.
 
 \subsubsection{Amplifier and ADC noise} \label{ampandadcnoise}
 
@@ -424,19 +471,41 @@ From a signal processing standpoint, a simple solution for low frequency wander 
 
 \subsection{Signal chain design}
 
-With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. Intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcomigng parasitic effects and signal chain noise before reaching the ADC.
+With today's available technology, signals in the millivolt range are relatively easy to measure even at quite high rates, if strongly driven. Intrusive methods of biopotential acquisition such as needle electrodes plugged directly into muscle fibers can work with no amplification stage, and just a direct connection to the ADC board, while still having good signal quality. On the other hand, when measuring with surface electrodes, both the electrode and biological tissue become a very high impedance element in the signal chain, which means that even relatively high biopotentials will have a hard time overcoming parasitic effects and signal chain noise before reaching the ADC.
 
 \subsubsection{Instrumentation amplifiers}
 
-Instrumentation amplifiers are a class of differential amplifier which boast high open-loop gain, low noise, and high input impedance. The typical textbook realization is with 3 operational amplifiers connected like in figure \ref{fig:inamp}, which allow the gain to be adjusted by choosing the value of resistor $R_G$. Their high input impedance means that very little current is needed to affect the inputs, helping with the issue of high electrode and tissue impedance. Their high power supply rejection ratio (PSRR) and common mode rejection ratio (CMRR) make them even more suitable for differential electrode applications, requiring very little extra circuitry.
+Instrumentation amplifiers are a class of differential amplifier which boast high open-loop gain, low noise, and high input impedance. The typical textbook realization is with 3 operational amplifiers connected like in figure \ref{fig:inamp}, which allow the gain to be adjusted by choosing the value of resistor $R_G$. Their high input impedance means that very little current is needed to affect the inputs, helping with the issue of high electrode and tissue impedance. Their high power supply rejection ratio (PSRR) and common mode rejection ratio (CMRR) make them even more suitable for differential electrode applications, requiring very little extra circuitry to eliminate power line noise coming both from the electronics themselves, as well as coupled to the patient.
 
-\begin{thesisfigure}{Typical implementation of an instrumentation amplifier}{inamp}
-
+\begin{thesisfigure}{Typical implementation of an instrumentation amplifier. Adapted from wdwd under the \href{https://creativecommons.org/licenses/by/2.5/deed.en}{CC BY 2.5 license}.}{inamp}
+\includesvg[width=0.5\linewidth]{inamp3opamp}
 \end{thesisfigure}
+
+In this setup, the amplified output is described by equation \ref{eq:inamp}, with adjustable $R_{gain}$ and thus gain. The other resistances are not usually specified, only their ratios being reported.
+
+\begin{thesisequation}{inamp}
+U_a = (U_1 - U_2) \cdot \underbrace{\left[\frac{R_3}{R_2}\cdot\left(1 + \frac{2R}{R_{gain}}\right)\right]}_{G}
+\end{thesisequation}
 
 \subsubsection{Multiplexed ADCs}
 
-\todo{write about them :)   - multiple channels, single converter, multiplexor (possible configurations - limited or arbitrary?), digital filtering, sequencer, conversion clock dependence on communication clock makes noise and is bad}
+Analog to Digital Converters come in a great variety of classes and specifications, depending on their intended use. The class most suitable for our use-case are multiplexed ADCs, which have a single internal measurement element, and multiplex one of many inputs to it to effectively do multiple channel time series measurements. The basic characteristics for selection include: the number of channels, output data rate (ODR), sample FIFO (or lack thereof), but for good signal-chain design, we must also carefully consider internal clock performance and independence from the serial clock, digital filtering capabilities, channel multiplexing dead time and other noise characteristics. We explain each of these further.
+
+\textbf{The number of channels} and \textbf{ODR} are self explanatory, directly impacting the characteristics of the resulting time series.
+
+Some multiplexed ADCs have internal \textbf{sample FIFOs} which can accumulate measured samples and which allow the host to read multiple queued up measurements instead of having to poll each sample as it becomes available. While it does not have an effect on signal quality, having an internal FIFO relaxes firmware timing constraings.
+
+Many multiplexed ADCs come with \textbf{integrated digital filters}, often not bypassable. These help with signal quality and are typically used for rejecting unwanted frequency bands, especially powerline noise. While they increase single-channel performance, they often introduce \textbf{multiplexing dead time}, wherein a filter must process a number of useless samples to enter its steady state regime after a channel switch. This dead time can greatly reduce overall data rate to even orders of magnitude less than the maximum data rate when iterating through all channels.
+
+Sample acquisition timing is essential and has great impact on the resulting signal. Clock jitter manifests itself as phase noise due to aperture uncertainty, limiting SNR according to equation \ref{eq:jitternoise}\cite{AN-501}, where $f$ represents signal frequency and $t_a$ represents RMS clock jitter in seconds-RMS.
+
+\begin{thesisequation}{jitternoise}
+\text{SNR} < -20\log(2\pi f t_a)
+\end{thesisequation}
+
+This phenomenon eliminates ADCs which depend on the serial clock for their internal logic, such as the AD5592 and AD5593, adding a strict requirement for independence between the communication clock and internal ADC logic clock.
+
+Finally, various internal phenomena introduce noise dependent on the measurement configuration, with a typical increase of noise with increasing measurement rate. Datasheet-specified noise figures should be consulted for the chosen parts.
 
 \subsubsection{EMI prevention over long wires}
 
@@ -444,11 +513,33 @@ When dealing with long wires and weak signals, electromagnetic interference (EMI
 
 \subsubsection{Common collector voltage buffer}
 
-Later used in both the preamplifier and Driven Right Leg circuits, the common collector amplifier, illustrated in figure \ref{fig:volbuf} is a minimal and cheap circuit for providing a low impedance, high drive strength "mirror" of an incoming signal with potentially higher impedance.
+Later used in both the preamplifier and Driven Right Leg circuits, the common collector amplifier (illustrated in figure \ref{fig:volbuf}) is a minimal and cheap circuit for providing a low impedance, high drive strength "mirror" of an incoming signal with potentially higher impedance.
 
 \begin{thesisfigure}{Common-collector voltage buffer}{volbuf}
 
-circuit frumos :)
+\resizebox{0.3\textwidth}{!}{%
+\begin{circuitikz}
+\tikzstyle{every node}=[font=\LARGE]
+\draw (9,16.25) to[Tnpn] (9,18.25); 
+\draw (8.15,17.25) to[short] (8,17.25);
+\draw (9,16.25) to[R] (9,14.5);
+\draw (9,16.5) to[short, -o] (10.75,16.5) ;
+\draw (8,17.25) to[short, -o] (6.75,17.25) ;
+\draw (9,14.5) to (9,14.25) node[ground]{};
+\draw [->, >=Stealth] (9,18.25) -- (9,18.75);
+\node [font=\LARGE] at (9,19) {V+};
+\node [font=\LARGE] at (6.5,17.75) {$V_{in}$};
+\node [font=\LARGE] at (7.5,17.75) {$i_B$};
+\node [font=\normalsize] at (9.25,17.75) {C};
+\node [font=\normalsize] at (8.25,17) {B};
+\node [font=\normalsize] at (9.25,16.75) {E};
+\node [font=\LARGE] at (8.25,15.25) {$R_E$};
+\node [font=\LARGE] at (11,17) {$V_{out}$};
+\node [font=\LARGE] at (10,16) {$i_{out}$};
+\draw [->, >=Stealth] (7,17.25) -- (7.5,17.25);
+\draw [->, >=Stealth] (9.5,16.5) -- (10,16.5);
+\end{circuitikz}
+}%
 
 \end{thesisfigure}
 
@@ -458,64 +549,76 @@ Assuming the input voltage puts the transistor in the linear operating range, th
 V_{out} = V_{in} - V_{BE} \approx V_{in} - 0.7\V
 \end{thesisequation}
 
+The transistor's amplification allows the output port to source up to $i_{out} \le \beta \cdot i_B$, and the circuit can sink up to $i_{out} \ge -V_{out}/R_E$, in which case the transistor is at the limit between off and conducting.
+
+\subsection{LibIIO internals}
+
+LibIIO 
+
 \newpage
 \section{Analysis, design and implementation (30pg)}
 
-\subsection{Objectives}
+We set some objectives for the biopotential data acquisition system and categorize them into MUSTs, which are absolutely required for success, SHOULDs, which can go to future work if unckecked, and vaguer non-checkable guiding principles:
 
-Additionally, we 
+The project MUST:
 
-\todo{Justify objectives, format these boring bullet lists in a nicer way}
-
-MUST:
 \begin{itemize}
-\item Open Hardware and So20ftware
-\item 8 channels
-\item Per-channel configuration
-\item 1000Hz data rate (500Hz bandwidth) \todo{NNNNNOOOOOOOOO}
-\item High CMRR, PSRR
-\item High SNR (>40dB EMG; >20dB for ECG)
-\item Open and extensible interfacing: ROS2, IIO
+    \item Consist of \textbf{Open Hardware and Software} under a permissive license, making all design files available for free and allowing anyone to use, modify, and improve them.
+    \item Allow for \textbf{at least 8 measurement channels}
+    \item Measure with \textbf{at least $600\Hz$ sample rate} to unambiguously capture EMG components up to $300\Hz$
+    \item Have \textbf{high CMRR, PSRR}, to the point where powerline noise is either not present or can be easily filtered out digitally
+    \item Have \textbf{high SNR} ($>40\dB$ for EMG; $>20\dB$ for ECG)
+    \item Provide software support for interfacing with \textbf{ROS2 and LibIIO}
 \end{itemize}
 
-SHOULD (unchecked go to future work):
+The project SHOULD:
+
 \begin{itemize}
-\item 16 channels
-\item Differential / single-ended configurability
-\item Right Leg Drive
-\item 1024Hz/2048Hz /channel data rate (1 Hz per FFT bin)
-\item <1uV noise after filtering
-\item 1uV precision
+    \item Allow for \textbf{16 measurement channels}
+    \item Allow per-channel \textbf{configurability of differential / single-ended measurements}
+    \item Provide active \textbf{Right Leg Drive}
+    \item Measure with \textbf{at least $1000\Hz$ sample rate}, ideally a power of two ($1024, 2048$) for "round" FFT bins of $1, 0.5\Hz$
+    \item \textbf{1uV precision}
 \end{itemize}
 
-Guiding principles:
-\begin{itemize}
-\item Cost
-\item Usability as an educational tool
-\item Use Analog Devices parts
-\item Modularity (decoupled hardware-firmware-software)
-\end{itemize}
+Lastly, some guiding principles are cost reduction, utilisation as an educational tool, modularity (decoupled hardware - firmware - software), and use of Analog Devices parts, to be later usable as a product demo.
 
-\todo{After finishing the prototype, make a comparison table between the already existing products and mine, especially on these objectives}
+We split the project into 3 main domains: mixed-signal, embedded firmware, and software.
+
+The \textbf{mixed-signal domain} consists of the electrodes, wires, amplification stages, and ADC. It is the most sensitive part of the signal chain, requiring care in its design and construction to bring as little noise as possible into the measured signals.
+
+The \textbf{embedded firmware domain} represents the code running on a microcontroller that communicates with both the host computer and the ADC. It will be implemented as a serial LibIIO device, allowing it to be configured from the host computer, for it to later record ADC data, buffer it, and send it in chunks.
+
+The \textbf{software domain} will be a minimal layer on top of LibIIO to provide easy access to the device via Python 3 bindings and a ROS2 node.
+
+The overall assembled setup consisting of a MAX78000FTHR microcontroller, EVAL-AD4114-SDZ ADC assembly, Right Leg Drive and Amplifier boards, is presented in figure \ref{fig:moneyshot}.
+
+Lastly, a minor convenience was designing and 3D printing a mounting bracket for the components, helping with immobilizing them and preventing accidental short circuits from loose wires.
+
+\begin{thesisfigure}{Assembled project setup with highlighted components: (1) EVAL-AD4114-SDZ, (2) MAX78000, (3) Right Leg Drive board, (4) AD8226 instrumentation amplifier board, (5) electrode wires, (6) USB to host computer}{moneyshot}
+\includegraphics[width=0.9\linewidth]{moneyshot.png}
+\end{thesisfigure}
 
 \newpage
-\subsection{Electical part}
+\subsection{Electrical part}
 
 \subsubsection{Interfacing with the patient}
 
-Taking from the research from section \ref{electrodetypes}, we do not consider PEDOT:PSS electrodes to be viable for this project due to them not being commercially available in standard and mass produced forms, being mostly a custom product experimented with in today's laboratories, even half a century after their discovery in the 1980s.
+Taking from the research from the previous electrode type research, we do not consider PEDOT:PSS electrodes to be viable for this project due to them not being commercially available in standard and mass produced forms, being mostly a custom product experimented with in today's laboratories, even half a century after their discovery in the 1980s.
 
-We settle for for snap-on adhesive Ag/AgCl gel electrodes thanks to being cheap, readily avaialble, standardized, and they can be connected to with inexpensive aligator clips, besides special (but more expensive) snap clips. The downsides are their low shelf life \todo{compare expired electrode signal quality with fresh electrodes once I get some fresh ones}, comparatively larger contact area (cca $200\mm^2$ vs \cite{Barbero2012}'s 2mm electrode diameters), and are lacking in subjective user experience, sometimes being very painful to detach.
+We settle for for snap-on adhesive Ag/AgCl gel electrodes thanks to being cheap, readily avaialble, standardized, and they can be connected to with inexpensive aligator clips, besides special (but more expensive) snap clips. The downsides are their comparatively larger contact area (cca $200\mm^2$ vs \cite{Barbero2012}'s 2mm electrode diameters), and are lacking in subjective user experience, sometimes being very painful to detach.
 
 \subsubsection{ADC}
 
 We initially chose the AD7124-8\cite{AD7124-8} thanks to its very diverse feature set, including: programmable gain amplifiers (PGAs) which had the potential to remove the need for the external amplification stage, high precision, high number of channels, and high sample rate. Unfortunately, it is not a single cycle ADC. This means that although it has very good throughput on a single channel, when switching between two channels there is a dead time for the integrated filter to settle, which effectively reduces the per-channel sample rate to less than $100\Hz$ when sampling all 16, which is virtually useless for ECG ($f_\text{max}=150\Hz$) and EMG ($f_\text{max}=500\Hz$).
 
-Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherwise has very good specificationss and has a much higher sample rate and a single cycle conversion mode.
+Our next choice was the AD4114\cite{AD4114}. It doesn't include PGAs, but otherwise has very good specificationss and has a much higher sample rate and a single cycle conversion mode. Switching ADCs was facilitated by the modular nature of the project.
 
-The AD717X family of ADCs, which the AD4114 is part of (in spite of the numbering scheme), all expose a similar interface to the application developer. A number of channels can be enabled, which are then measured in a loop, in ascending order of their indices. Each of the 16 channels can select one of 34 inputs: 16 unipolar measurements ($V_{in,k} - V_{incom}$, 16 bipolar measurements ($V_{in,2k} - V_{in,2k+1}$ and $V_{in,2k+1} - V_{in,2k}$), an internal temperature sensor or the voltage reference itself. If an input is selected by multiple channels, it is read multiple times in the sequence. To parametrize a channel's conversion, one of 8 "setups" can be assigned. Setups describe whether a measurement is unipolar of bipolar, the used reference, buffering and filtering settings. Each setup has a corresponding digital filter with an internal state. If multiple channels refer to the same setup, they will also be alternately using the same digital filter, requiring some extra logic for avoiding latent (i.e. "hidden") samples from passing from one channel's to another's readouts. Conveniently, the \texttt{SING\_CYC} flag puts the ADC in "single cycle mode", which always flushes out the digital filter when switching channels, at the expense of worse filter performance, data rates, and greater noise.
+Moreso, to avoid the need for PCB design, we use the EVAL-AD4114SDZ evaluation board, which already implements isolation between the digital and analog sides, overvoltage and ESD protection, an external voltage reference, and various other features.
 
-The AD4114 lacks an internal sample buffer, meaning that data from a conversion must be read before the next one or else it is lost. While the digital interface allows for an interrupt signal on the \drdy line to notify the host of new data, it is incompatible with most microcontrollers' hardware SPI implementations and it is much more suitable for an FPGA host. Therefore we can and should resort to polling the status register to check for new samples, which are announced through the \texttt{RDY} bit. Polling should be done at least as fast as the conversion rate, but SPI transactions are cheap enough to poll even an order of magnitude more often than samples are coming in.
+The AD717X family of ADCs, which the AD4114 is part of (in spite of the numbering scheme), all expose a similar interface to the application developer. A number of channels can be enabled, which are then measured in a loop, in ascending order of their indices, by use of an internal sequencer. Each of the 16 channels can select one of 34 inputs: 16 unipolar measurements ($V_{in,k} - V_{incom}$, 16 bipolar measurements ($V_{in,2k} - V_{in,2k+1}$ and $V_{in,2k+1} - V_{in,2k}$), an internal temperature sensor or the voltage reference itself. If an input is selected by multiple channels, it is read multiple times in the sequence. To parametrize a channel's conversion, one of 8 "setups" can be assigned. Setups describe whether a measurement is unipolar of bipolar, the used reference, buffering and filtering settings. Each setup has a corresponding digital filter with an internal state. If multiple channels refer to the same setup, they will also be alternately using the same digital filter, requiring some extra logic for avoiding latent (i.e. "hidden") samples from passing from one channel's to another's readouts. Conveniently, the \texttt{SING\_CYC} flag puts the ADC in "single cycle mode", which always flushes out the digital filter when switching channels, at the expense of worse filter performance, data rates, and greater noise.
+
+The AD4114 lacks an internal sample FIFO, meaning that data from a conversion must be read before the next one or else it is lost. While the digital interface allows for an interrupt signal on the \drdy line to notify the host of new data, it is incompatible with most microcontrollers' hardware SPI implementations and it is much more suitable for an FPGA host. Therefore we can and should resort to polling the status register to check for new samples, which are announced through the \texttt{RDY} bit. Polling should be done at least as fast as the conversion rate. Experimentally, we deduced a $5\MHz$ limit for SPI communication, in spite of the theoretical $20\MHz$ limit of the AD4114, likely due to parasitic effects on uneven length jumper wires for high speed SPI.
 
 One of the most important limitations in determining which parameters to run the ADC in is its noise, which varies with the sample rate. While high sample rates are very desirable given we have practically limitless digital signal processing capacity, they also degrade the signal quality. This is especially relevant when sampling multiple channels, where the Output Data Rate (ODR) is divided between them. A single channel measurement with $\ge 500\Hz$ bandwidth can be done with the $1007\Hz$ setting for an effective resolution of $17.3\text{ bits}$, but having 6 channels forces the use of the $6211\Hz$ setting with $15.4\text{ bits}$ of resolution, and more channels than that start limiting the bandwidth to less than $500\Hz$.
 
@@ -530,8 +633,8 @@ $3$ & $3115$ & sinc5+sinc1 & $1038.33$ & $41$ \\
 $4$ & $4444$ & sinc5+sinc1 & $1111$ & $56$ \\
 $5$ & $5181.65$ & sinc5+sinc1 & $1036.33$ & $64$ \\
 $6$ & $6211$ & sinc5+sinc1 & $1035.17$ & $74$ \\
-$7+$ & $10309$ & sinc3 & $10309/N$ & $1068$
-
+$7-10$ & $10309$ & sinc3 & $10309/N > 1000$ & $1068$ \\
+$11-16$ & $10309$ & sinc3 & $10309/N < 1000$ & $1068$
 \end{thesistable}
 
 \subsubsection{Amplification stage}
@@ -541,7 +644,7 @@ The chosen AD4114 ADC has $N=24$ bits of resolution with one LSB equating to the
 \text{LSB} = V_{REF} / (2^{N-1} \cdot 0.1)
 \end{thesisequation}
 
-Using the internal $2.5\V$ reference, $\text{LSB} \approx 2.98\uV$. The noise level varies depending on the sample rate. At the single-channel $f_s=1007\Hz$, 6 channel $f_s=6211\Hz$, and all channel $f_s=10309\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$, $\overline{V_{na,6211}^2}=74\uV$ and $\overline{V_{na,10309}^2}=1068\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs relative to a $1\mV$ signal:
+Using the internal $2.5\V$ reference, $\text{LSB} \approx 2.98\uV$. The noise level varies depending on the sample rate. At the single-channel $f_s=1007\Hz$, 6 channel $f_s=6211\Hz$, and all channel $f_s=10309\Hz$, the ADC noise is specified to be around $\overline{V_{na,1007}^2}=20\uV$, $\overline{V_{na,6211}^2}=74\uV$ and $\overline{V_{na,10309}^2}=1068\uV$ RMS respectively. Without an amplification stage, this would result in the following SNRs relative to a $1\mV$ signal typical of ECG/EMG:
 
 \begin{thesisequation}{SNR_no_amp}
 \begin{aligned}
@@ -554,7 +657,7 @@ Using the internal $2.5\V$ reference, $\text{LSB} \approx 2.98\uV$. The noise le
 
 In the case of 7+ channels, a $1\mV$ signal slightly dips under the noise floor, becoming unmeasurable. Thus, a preamplification stage is required for enabling the use of all channels.
 
-We choose the AD8226 \cite{AD8226} instrumentation amplifier as the central component of the preamplification stage. It is inexpensive, readily available, has more than sufficient CMRR ($>80\dB$) and can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth of $\Delta f=500\Hz$ is:
+We choose the AD8226 \cite{AD8226} instrumentation amplifier as the central component of the preamplification stage. It is an inexpensive, readily available instrumentation amplifier with more than sufficient CMRR ($>80\dB$). It can be configured for a gain of $G=\numrange{1}{1000}$ using a resistor $R_G = 49.4\kohm / (G-1)$. Its RMS voltage noise for our desired bandwidth of $\Delta f=500\Hz$ is:
 
 \begin{thesisequation}{8266_noise}
 \begin{aligned}
@@ -572,13 +675,7 @@ With the preamp stage added before the ADC, the total noise of a sample and the 
 \end{aligned}
 \end{thesisequation}
 
-As described in section \ref{ampandadcnoise}, increasing the gain will increase SNR but with diminishing returns, and it will limit the available measurement range. With the specified values for the AD8226, we compute a handful of gain scenarios (table \ref{tab:gains}) and choose $G\approx 20$ as a fair middleground between good SNR and good input range, allowing for some fluctuations without saturating the sensors. We use the part's gain formula to compute a suitable gain resistor:
-
-\begin{thesisequation}{}
-R_G = \frac{49.4\kohm}{G-1} = \frac{49.4\kohm}{20-1} \approx 2600\ohm
-\end{thesisequation}
-
-The closest E6-series value is $R_G = 2200\ohm$ which would give a gain of $G\approx 22.45 \approx +27\dB$.
+As described in section \ref{ampandadcnoise}, increasing the gain will increase SNR, but with diminishing returns, and it will limit the available measurement range. For the AD8226, we compute a handful of gain scenarios (table \ref{tab:gains}) and choose $G\approx 20$ as a fair middleground between good SNR and good input range, allowing for some fluctuations without saturating the sensors.
 
 \begin{thesistable}{0.4}{l|ll}{Full scale, SNR for various gains}{gains}
 Gain & Approx. range & $\text{SNR}$ \\ \hline
@@ -593,13 +690,17 @@ Gain & Approx. range & $\text{SNR}$ \\ \hline
 $\infty$ & $0$    & $66.16\dB$
 \end{thesistable}
 
+We use the part's gain formula to compute a suitable gain resistor (equation \ref{eq:gainres}). The closest E6-series value is $R_G = 2200\ohm$ which would give a gain of $G\approx 22.45 \approx +27\dB$.
+
+\begin{thesisequation}{gainres}
+R_G = \frac{49.4\kohm}{G-1} = \frac{49.4\kohm}{20-1} \approx 2600\ohm
+\end{thesisequation}
+
 Using an active element (the instrumentation amplifier) also gives us the opportunity to do some hardware filtering. To combat high frequency noise, we add a first order RC low-pass filter with a cutoff of $f_c \approx 500\Hz$. Our implementation uses $R=330\ohm$ and $C=1\uF$ for a theoretical $3\dB$ cutoff frequency of:
 
 $$f_c = \frac{1}{2\pi \cdot 330\ohm \cdot 1\uF} = 482.28\Hz$$
 
-To encode the bipolar differential measurement as a unipolar signal, we bias the amplifier's output voltage using the AD8226's $V_{REF}$ input. As specified in the datasheet, this pin must be driven with less than $2\ohm$ impedance, so just a simple resistor divider wouldn't suffice. We use a common-collector voltage buffer after a $10\kohm - 10\kohm$ divider to amplify the drive strength, biasing the output to approximately $V_{REF} \approx 5\V / 2 - 0.7\V = 1.8V$.
-
-To help with transient power supply fluctuations, the instrumentation amplifier's positive supply as well as $V_{REF}$ are decoupled with $0.1\uF$ capacitors. The second should also reduce BJT flicker noise.
+To encode the bipolar differential measurement as a unipolar signal, we bias the amplifier's output voltage using the AD8226's $V_{REF}$ input. To generate the bias voltage, we use a $10\kohm - 10\kohm$ voltage divider from $5\V$ to ground, resulting in $2.5\V$. As specified in the datasheet, this pin must be driven with less than $2\ohm$ impedance, so this wouldn't suffice. We use a common-collector voltage buffer to amplify the divider's drive strength, biasing the output to approximately $V_{REF} \approx 5\V / 2 - 0.7\V = 1.8V$ after the PN junction voltage drop. To help with transient power supply fluctuations, the instrumentation amplifier's positive supply as well as $V_{REF}$ are decoupled with $0.1\uF$ capacitors. The second should also reduce BJT flicker noise coming from the voltage buffer.
 
 The overall circuit diagram and a picture of the built amplifier board are presented in figure \ref{fig:ampboard}. Experimental validation of the preamplifier board is covered later in the paper.
 
@@ -612,18 +713,14 @@ The overall circuit diagram and a picture of the built amplifier board are prese
 
 \subsubsection{Microcontroller}
 
-For microcontroller selection, the main performance considerations are on the one hand the ability to communicate via SPI fast enough to comply with the desired sample rate, and on the other hand for it to have a fast enough clock rate and memory for the IIO Daemon which will comprise most of the final application. For further work, networking capabilities would be a nice-to-have to be able to run a standalone ROS2 node. A plethora of well known boards match these criteria, among which the very popular Espressif ESP8266 and ESP32, or the Raspberry Pi RP2040 and RP2350 would be sufficient and good alternative choices thanks to their excellent community support. The popular, yet more and more obsolete ATMEGA328p of Arduino fame isn't fast enough for both recording and further transferring all 16 channels, especially not through unmodifier IIOD / ros-micro implementations. We chose the Analog Devices MAX78000FTHR board thanks to its powerful specs which would also allow for some degree of digital signal processing on the board itself. We will use the MAX78000's dedicated SPI bus which is exposed on the feather board.
+For microcontroller selection, the main performance considerations are on the one hand the ability to communicate via SPI fast enough to comply with the desired sample rate, and on the other hand for it to have a fast enough clock rate and memory for the IIO Daemon which will comprise most of the final application. For further work, networking capabilities would be a nice-to-have to be able to run a standalone ROS2 node. A plethora of well known boards match these criteria, among which the very popular Espressif ESP8266 and ESP32, or the Raspberry Pi RP2040 and RP2350 would be sufficient and good alternative choices thanks to their excellent community support. The popular, yet more and more obsolete ATMEGA328p of Arduino fame isn't fast enough for both recording and further transferring all 16 channels, especially not through unmodifier IIOD / ros-micro implementations.
 
-\todo{MAX78000 pinout diagram?}
+We chose the Analog Devices \textbf{MAX78000FTHR microcontroller platform} thanks to its powerful specs which would also allow for some degree of digital signal processing on the board itself. We will use the MAX78000's dedicated SPI bus which is exposed on the feather board. On board, it also has a MAX32625 acting like a USB interface, which also exposes DAPLINK functionality, allowing for easy firmware uploads (by just copying files onto a virtual mounted filesystem) and debugging (via CMSIS-DAP by using the VS Code environment with the Cortex Debug extension).
 
 \newpage
 \subsection{Firmware part}
 
-\todo{Short 100-200 word intro about firmware}
-
-\todo{The no-OS framework}
-
-No-OS is a firmware framework developed by Analog Devices that defines a common API for accessing common peripherals on embedded systems. While its scope somewhat overlaps with a typical Hardware Abstraction Layer (HAL) within an Operating System, no-os focuses on providing minimal abstractions to run directly on bare metal, as the name suggests. Additionally, it provides abstractions for the platform architecture, build systems and custom vendor SDKs, such that code can be very easily ported from one platform to another.
+For the firmware, we will be structuring our code around No-OS\cite{noos}, an open-source firmware framework developed by Analog Devices that defines a common API for accessing common peripherals on embedded systems. While its scope somewhat overlaps with a typical Hardware Abstraction Layer (HAL) within an Operating System, no-os focuses on providing minimal abstractions to run directly on bare metal, as the name suggests. Additionally, it provides abstractions for the platform architecture, build systems and custom vendor SDKs, such that code can be very easily ported from one platform to another.
 
 The benefits of using such a versatile framework were constantly apparent during this project's development, which required us to change the microcontroller platform, peripherals, as well as communication protocols during protoyping. While each change required small rewrites of the codebase, the uniform structure of no-os meant we didn't have to rewrite thousands of lines of code after each hardware change.
 
@@ -631,92 +728,344 @@ The benefits of using such a versatile framework were constantly apparent during
 
 In order to send data to the attached computer or carrier board, the de facto solution is using UART-over-USB, which exposes an USB interface to the attached host and UART to the microcontroller. Most commonly, microcontrollers have dedicated circuitry for UART transmit and receive, which allows the rest of the program to run concurrently to serial communication. This is implemented using two FIFO buffers, one for data pending to be sent from the microcontroller (TX FIFO) and one for received data ready to be processed by the program (RX FIFO).
 
-De facto, most microcontroller development boards, including the MAX78000FTHR, MAX-Arduino, and the more common ATMEGA368P "Arduino-like" boards provide UART-USB translation via a dedicated IC, abstracting away the complexities of the USB communication stack.
+De facto, most microcontroller development boards, including the MAX78000FTHR, and the more common ATMEGA368P "Arduino-like" boards provide UART-USB translation via a dedicated IC, abstracting away the complexities of the USB communication stack.
 
-UART modules have varying degrees of configurability of the baud rate, flow control, and framing. For most practical uses, though, including this project, one may just specify the baud rate, defaulting to 8N1 (8 data bits, no parity bit, 1 start bit, 1 stop bit) framing and no flow control. Typical baud rates include 9600 baud, a legacy of 20th century POTS modems (introduced by the V.32 ITU-T standard \cite{}) and 115200 baud, common both in last-century modem systems, but also recently popularized by its default use in the Arduino development environment.
+UART modules have varying degrees of configurability of the baud rate, flow control, and framing. For most practical uses, though, including this project, one may just specify the baud rate, and default to 8N1 (8 data bits, no parity bit, 1 start bit, 1 stop bit) framing and no flow control. Typical baud rates include 9600 baud, a legacy of 20th century POTS modems (introduced by the V.32 ITU-T standard) and 115200 baud, common both in last-century modem systems, but also recently popularized by its default use in the Arduino development environment.
 
-To achieve the required bandwidth for this project, a suitable baud rate must be chosen. Given the sample rate $f_s$, number of channels $N$, and number of bytes per channel sample $d$, and 8N1 framing (giving $10\text{ baud}/\text{byte}$), the baud rate $f_{baud}$ must be:
+To achieve the required bandwidth for this project, a suitable baud rate must be chosen. Given the output data rate $\text{ODR}$, number of bytes per channel sample $d$, and 8N1 framing (giving $10\text{ baud}/\text{byte}$), the baud rate $f_{baud}$ must be:
 
 \begin{thesisequation}{baud}
-f_{baud} \geq f_s \cdot N \cdot d \cdot 10 = 1024 \cdot 16 \cdot 3 \cdot 10 = 491520\text{ baud}
+f_{baud} \geq \text{ODR} \cdot d \cdot 10 = 1024 \cdot 10309 \cdot 4 \cdot 10 = 412360\text{ baud}
 \end{thesisequation}
 
-Additionally, choosing a baud rate larger than this minimum will allow for less timing concerns, especially when it comes to not overflowing the receive and transmit buffers.
+Protocol overhead means we must choose a baud rate safely above it. Choosing a baud rate larger than this minimum will also allow for less timing concerns, especially when it comes to not overflowing the receive and transmit buffers.
 
-Baud rate selection is not universal across devices and the firmware for each hardware platform must choose a rate that is both compatible with the hardware and that satisfies relation \ref{eq:baud}. In the case of the MAX78000FTHR, a rate of exactly $491520\text{ baud}$ can be achievend by using the IBRO (Internal Baud Rate Oscillator) of $7.3728\text{MHz}$ with a clock divider of $15$, but [we] will use a divider of $9$ for a "round" value of $819200\text{ baud}$ to have a good margin of error and not need such strict synchronization between the UART module and the rest of the program.
+Baud rate selection is not universal across devices and the firmware for each hardware platform must choose a rate that is both compatible with the hardware and that satisfies relation \ref{eq:baud}. In the case of the MAX78000FTHR, a rate of exactly $491520\text{ baud}$ can be achievend by using the IBRO (Internal Baud Rate Oscillator) of $7.3728\text{MHz}$ with a clock divider of $15$, but we will use a rounder $500000\text{ baud}$ for convenience.
 
-\subsubsection{SPI Communication basic proof of concept (2024-05 single channel demo)}
 
-For initial validation of the concept on the AD4114, \todo{write about the PoC: 1 channel, no amplification, full sample rate, can see both EMG and ECG on it. can do nice graphs, can diagnose my RBBB}
+% \subsubsection{SPI Communication basic proof of concept}
 
-\subsubsection{No-OS Driver}
+% For initial validation of the concept on the AD7124-8, we develop a simple, non-IIO app that sets up one channel, no amplification, $1007\Hz$ sample rate, and sends samples via serial without any control. Interacting with the AD4114 is done by SPI reads and writes, implementing a basic reduced version of the AD4114 digital interface.
 
-Fortunately, the no-OS ecosystem already provides drivers for both the MAX78000 platform as well as the AD4114 as part of the AD717X family of ADCs\cite{ad717x}. What's left is to 
+% Initially, the SPI and UART buses are configured for communicating with the AD4114 and host computer, respectively. This initialization is separed into common parameters such as: UART baud rate and framing, SPI baud rate, mode (CPHA, CPOL), and platform-specific parameters, in our case UART flow control and SPI CS polarity and drive strength. Once the parameters are prepared, a call to \texttt{no\_os\_spi\_init} and \texttt{no\_os\_uart\_init} respectively do the initialization.
 
-\subsubsection{IIOd integration}
+% The next step is configuring the AD4114. A minimal configuration for single channel measurements 
 
-Defining the structure of the IIO context is a very important step as it solidifies a mapping between the device-specific functionality on the hardware side and the application-specific functionality on the software side. Choosing a versatile collection of attributes to configure the device and channels to structure the data is no trivial task with no unique solution. The exposed attributes may encode very low level details, as in {find an AD part with a very bare-metal attribute mapping}, or more high level ones. Choosing which configuration is to be specified on the software side and which configuration is to be derived from that on the firmware side {of pula mea ce scriu aici... vreau sa zic ca nu o sa expun direct registri, ci o sa expun chestii mai high level: frecventa de mains hum (50/60), parametri de filtrare, poate sample rate daca o sa imi dau variante (posibil tho sa fie fix la 1k), si pe baza lor se ocupa firmware sa puna registrii cum trebuie.
+% 1. Set up SPI, UART
+% 2. Set up AD4114 registers
+% 3. Repeatedly read sample, write to UART
 
-For lower-level functionality, an IIO debug interface is also specified, which allows for direct manipulation of the ADC's registers. This shouldn't be normally used, but allows for total control of the device in case the user needs it.
+\subsubsection{Project structure}
 
-1. Defining the desired iio context structure: what do we expose, in which formats, etc
-2. Handler functions
-3. Boom done, connect to it from software
+No-OS recommends the following project structure, which we follow:
+\dirtree{%
+ .1 project. 
+ .2 src. 
+ .3 common: declarations common to all platforms. 
+ .4 common\_data.h. 
+ .4 common\_data.c. 
+ .3 platform: platform-specific declarations. 
+ .4 maxim. 
+ .5 parameters.c. 
+ .5 parameters.h. 
+ .5 platform\_src.mk: brings in platform-specific sources. 
+ .4 platform\_includes.h. 
+ .3 iio\_ad4114\_exg.c. 
+ .3 iio\_ad4114\_exg.h. 
+ .3 main.c. 
+ .2 Makefile: refers to no-OS makefiles. 
+ .2 src.mk: list of source files. 
+}
+
+The separation of common and platform specific parameters is relevant especially when it comes to initialization of the UART, SPI, IRQ, timer subsystems, where there are usual parameters common to any platform, such as baud rates, SPI mode (CPHA, CPOL), timer frequency, etc, but also platform drivers may specialize some, such as choosing a specific IRQ controller and priorities, SPI drive strength, UART flow control, etc.
+
+\subsubsection{No-OS Drivers}
+
+Fortunately, the no-OS ecosystem already provides drivers for both the MAX78000 platform as well as the AD4114 as part of the AD717X family of ADCs\cite{ad717x}. This means that we do not have to implement the SPI digital communication protocol ourselves, as the most common operations: initialization, selecting channels and inputs, assigning measurement setups, reading data, are already implemented.
+
+\subsubsection{LibIIO integration}
+
+It is quite common for no-OS projects to provide IIO functionality, and for this reason no-OS has a dedicated LibIIO protocol implementation. This provides a convenient way of describing LibIIO contexts, with customizable callbacks for all read/write operations with both actual sample data and attributes. Additionally, it implements an internal event loop which abstracts away asynchronous communication with both the host computer and the connected peripherals, which is a major concern in a system where concurrent real-time communication takes place.
+
+The first step is defining the structure of the IIO context is, as it solidifies a mapping between the device-specific functionality on the hardware side and the application-specific functionality on the software side. There is a spectrum of choice between exposing attributes for very low-level details (such as individual flags in registers), which offloads most application logic to the software side, and exposing more high-level attributes which are translated into register values by the firmware. Because we are not defining a general-purpose ADC device, we will restrict ourselves to only one configurable attribute per channel, namely the desired input to measure, opaquely choosing the best suited sample rates, filter settings, and setup assignment based on table \ref{tab:configs}. Read-only attributes will expose the computed sampling frequency for the device, as well as calibration values (scale and offset) and a list of available input pairs for each channel.
+
+De facto, attributes with values selectable among a set (such as the channel input pair selection) are named by appending \texttt{\_available} to the name of the attribute they refer to. In our case, channels have a read/write attribute \texttt{input} for querying or setting the selected input pair, as well as the read-only \texttt{input\_available} which contains a space-separated string of all input pair names.
+
+For lower-level functionality and debugging, an IIO debug interface is also specified, which allows for direct manipulation of the ADC's registers. This shouldn't be normally used, but allows for total control of the device in case the user needs it.
+
+Besides setting up the IIO device, we must also initialize an "IIO app", which is the daemon itself, which may communicate with multiple devices. The IIO app is initialized through the \texttt{iio\_app\_init\_param} struct passed to the \texttt{iio\_app\_init} function, which contains: a list of all devices, UART parameters, a list of hardware triggers.
+
+We must also allocatea buffer for samples to be stored in between them being submitted by the ADC and them being read by the host computer. In our implementation, this is a static fixed-size buffer in the global namespace, with room for $1024$ samples on $16$ channels, for around one second buffer time:
+
+\begin{lstlisting}[language=C]
+char _iio_ad4114_samples_buf[16 * 4 * 1024];
+\end{lstlisting}
+
+\subsubsection{Patching platform drivers for fast UART}
+
+One issue encountered with our setup, which is specific for no-OS IIOD on maxim microcontrollers, was the very slow implementation of assynchronous UART receive operations. This is due to a high amount of indirection, wherein both the underlying Maxim SDK (msdk), the no-OS MAX78000 platform driver, and the no-OS IIOD implementation use software implementations for interrupt handling with an excess of function pointer tables, dynamic memory allocations, and unnecessary control structures, all of which slowed down UART communication enough for it to break the high throughput we need. The main symptom was that an UART byte receive interrupt would take so long to execute that the next byte would arrive before it is done, entering a nested interrupt thanks to the NVIC (Nested Vector Interrupt Controller) and breaking application logic.
+
+Prior to our modification, the function call chain upon receiving a byte via UART would be: \texttt{UART0\_IRQHandler}, \texttt{\_uart\_common\_handler}, \texttt{MXC\_UART\_AsyncHandler},\\\texttt{MXC\_UART\_RevA\_TransactionAsync} which queues a callback in no-os which ultimately ends up calling \texttt{uart\_rx\_callback}, \texttt{max\_uart\_read\_nonblocking} which indirectly calls\\\texttt{max\_uart\_callback} which is the end of the chain. Needless to say, this is an extreme amount of overhead for what is essentially passing an 8 bit value from the UART receive register to the no-OS UART read buffer.
+
+\begin{lstlisting}[language=C]
+void UART0_IRQHandler()
+{
+    _uart_common_handler(MXC_UART0);
+}
+\end{lstlisting}
+
+We propose a lightweight modification which bypasses this entire mechanism and replaces all of it with just a very quick 8 bit store to a circular buffer. In case error bits are set in the UART registers, we fall back to the original implementation, which handles edge cases. For storing queued bytes, we use a \texttt{lf256fifo}, a no-OS utility structure for a very efficient 256 byte circular buffer.
+
+\begin{lstlisting}[language=C]
+void UART0_IRQHandler()
+{
+    // Short circuit complex logic
+    bool fallback = true;
+    if(g_uart0_rx_fifo &&
+        (MXC_UART0->int_fl & MXC_F_UART_INT_FL_RX_THD))
+    {
+        // Got one byte. Clear interrupt:
+        MXC_UART0->int_fl |= MXC_F_UART_INT_FL_RX_THD;
+        // Store byte in fifo
+        lf256fifo_write(g_uart0_rx_fifo, MXC_UART0->fifo);
+        fallback = false;
+    }
+
+    // fall back to slow handler if there was an unexpected state:
+    if(fallback)
+        _uart_common_handler(MXC_UART0);
+}
+\end{lstlisting}
 
 \subsubsection{Continuous and asynchronous data acquisition using IIO triggers}
 
-By default, the expected behaviour of IIO devices is to start acquisition on selected channels when requested (via an \texttt{OPEN} command), and stop and disable the channels once the requested number of samples is reached. In low sample rate scenarios, the host may request the next acquisition window very soon after the current one finishes, and assuming the time delay between windows can be minimized with respect to the overall window size, this could prevent missing any samples and only introduce a small amount of phase drift. Additionally, there are high-speed applications in which continuity between acquisition windows is not strictly required. On the other hand, with \our roughly $16\kHz$ sample rate (cca. $60 - 62\us/\text{sample}$) and requirement to not miss any samples, this application has very little room for error in timing. As per \cite{linuxlatency}, modern real-time linux setups have scheduler latencies in the tens and hundreds of microseconds, which realistically leaves no time to actually receive the current window's buffer and send a new acquisition request without missing any samples, even if the acquisition channels were left enabled.
-
-\todo{figure, vertical stack of sequence diagrams of: normal iio polling with phase drift in slow ADC, fast ADC - loss of samples, trigger and buffer}
+By default, the expected behaviour of IIO devices is to start acquisition on selected channels when requested via an \texttt{OPEN} command, and stop and disable the channels once the requested number of samples is reached. In low sample rate scenarios, the host may request the next acquisition window very soon after the current one finishes, and assuming the time delay between windows can be minimized with respect to the overall window size, this could prevent missing any samples and only introduce a small amount of phase drift. Additionally, there are high-speed applications in which continuity between acquisition windows is not strictly required. On the other hand, with our roughly $10\kHz$ sample rate (cca. $100\us/\text{sample}$) and requirement to not miss any samples, this application has very little room for error in timing. As per \cite{linuxlatency}, modern real-time linux setups have scheduler latencies in the tens and hundreds of microseconds, which realistically leaves no time to actually receive the current window's buffer and send a new acquisition request without missing any samples, even if the acquisition channels were left enabled.
 
 With this general issue in mind, IIO defines triggers as software or hardware events that initiate data acquisition without requiring regular polling from the host. Data captured as a result of triggers is stored in circular buffers and provided with minimal latency whenever the host polls next.
 
-With the AD4114 in continuous conversion mode, two trigger sources are apparent: using the \drdy\ behaviour in continuous conversion mode (as described in \ref{label:drdy}) or using a timer to poll the AD4114 at least as fast as the conversion rate. While the first option is more elegant and wouldn't do any unnecessary polling, it requires nonstandard operation of the SPI protocol by keeping CS active and monitoring the MISO (\drdy) line, which isn't generally possible unless \we bitbang the SPI protocol or have access to more configurable IO options like on FPGA platforms or the Programmable Input and Output subsystem of RP2040 fame (\cite{Smith2021}). The second option of setting up a timer interrupt which polls the AD4114 status register to check if a new conversion result is available
+With the AD4114 in continuous conversion mode, two trigger sources are available: using the \drdy signal to get an interrupt when a new sample is ready, or using a timer to poll the AD4114 at least as fast as the conversion rate. While the first option is more elegant and wouldn't do any unnecessary polling, it requires nonstandard operation of the SPI protocol by keeping CS active and monitoring the MISO (\drdy) line, which isn't generally possible unless we implement the SPI protocol in software or have access to more configurable IO options like on FPGA platforms or the Programmable Input and Output subsystem of RP2040 fame (\cite{Smith2021}). The second option of setting up a timer interrupt which polls the AD4114 status register to check if a new conversion result is available and easy to implement.
 
-\todo{more :)}
+To compute a suitable interval for the polling frequency $f_p$ it is trivial that $f_p \geq \text{ODR} = 10309\Hz$. Additionally, we cannot poll faster than it takes to do the polling itself, which is an SPI transfer of 2 bytes (1 request byte, 1 response byte with the status register), amounting to $T = 2 \cdot 10 / f_{SPI} = 4\us$ and limiting $f_p \leq 250\kHz$. There is no use in polling orders of magnitude faster than samples become available, so we settle for polling at around $1.5\times$ the sampling ratio, with $f_p = 16000\Hz$. In the highest data rate scenario, we will have a sample available every $16000/10309 \approx 1.55$ polls on average. In the lowest data rate scenario, this number rises to $16000/1007 \approx 15.89$ polls per sample.
 
-\subsubsection{ROS2 on network-capable microcontrollers}
+The regularly timed polling is done by using an IIO hardware trigger based on a timer IRQ. When any channels are active, the timer IRQ is enabled by the underlying IIO implementation and its handler can poll, get data, and store it in a buffer to be sent to the host later. Besides the time required for communication, storing the samples should also be done as quickly as possible to not take up microcontroller execution time. In our implementation, this is done by just a single 32 bit store in a static sample buffer. When the sample buffer is full (i.e. all channels have stored one value), it is submitted to the no-OS IIO implementation via a call to \texttt{iio\_buffer\_push\_scan}. A shortened implementation of the trigger / IRQ handler follows:
 
-In recent years, there has been a wave of developments in fast, network-capable, cheap microcontroller platforms, leading to products such as the Espressif ESP8266 and ESP32, or the Raspberry Pi Pico-W, which are capable of running ROS2 nodes all by themselves. 
+\begin{lstlisting}[language=C]
+trigger_handler(struct iio_device_data *dd)
+{
+    // 2 byte SPI transfer to poll if a sample is ready
+    int ret = check_ad4114_ready(dev);
+    if(ret == -EAGAIN) return 0;
 
-\todo{more :)}
+    AD717X_ReadData(adc, &data);
 
-\subsubsection{Digital filtering of the signal}
+    // Data contains status register as well:
+    int8_t status = data & 0xff;
+    int8_t channel = status & 0xf;
+    data = data >> 8; // actual measurement is only the first 3 bytes
 
-Although the digital signal processing part of such biopotential measurement systems is very important for a full product, it is not the main topic of this thesis, and yet the chosen system architecture offloads most of the signal conditioning to the digital domain. The main source of noise is mains hum, with a fundamental frequency of $50\Hz$ and various harmonics, which can all be removed using a notching filter, resulting in minimal loss of information in other portions of the frequency spectrum. The Qaulity factor $Q$ of the filter controls how narrow the attenuated frequency bands are, and it can be adjusted. It poses a tradeoff between good noise rejection and signal quality, and is designed to be adjustable. Experimentally, we found values of around 5-10 to give the best waveforms for visual inspection. Figure X illustrates the tradeoff between small Q doing ??? and high Q doing ???.
+    dev->sample_buf[dev->channel_offset[channel]] = data;
+    
+    // Got a full sample of all channels
+    if(channel == dev->last_enabled_channel)
+        iio_buffer_push_scan(dd->buffer, dev->sample_buf);
+}
+\end{lstlisting}
 
-Taking from scipy's implementation of an IIR Notching filter (`scipy.signal.iircomb`), I also use the structure described in {cite: Sophocles J Orfanidis, "Introduction to Signal Processing", Prentice-Hall, 1996, ch. 11, "Digital Filter Design"} thanks to its adjustable Q factor, numerical stability even at higher orders, and default rejection of the DC component of the signal, which are all very useful for the required signal conditioning. Parametrized by the the sampling frequency $f_s$, the cutoff freqiency $f_0$ (which must be an integer divisor of $f_s$), quality factor $Q$, the IIR filter $H(z)$ is computed as:
 
-\begin{gather*}
-N = f_s / \omega_0 \overset{!}{\in} \mathbb{N} \\
-\omega_0' = \frac{2\pi\omega_0}{f_s}  \\
-\omega_\Delta = \frac{\omega_0'}{Q}  \\
-\beta = \tan(N * \omega_\Delta / 4)  \\
-a = \frac{1 - \beta}{1 + \beta}
-\end{gather*}
-\begin{thesisequation}{filter}
-H(z) = \frac{1}{1 + \beta} \cdot \frac{1 - z^{-N}}{1-az^{-N}}
-\end{thesisequation}
 
-\todo{check I transcribed these correctly and actually implement them myself! I only blindly copied these for now}
+
+
+
+% \subsubsection{Digital filtering of the signal}
+
+% Although the digital signal processing part of such biopotential measurement systems is very important for a full product, it is not the main topic of this thesis, and yet the chosen system architecture offloads most of the signal conditioning to the software domain. The main source of noise is mains hum, with a fundamental frequency of $50\Hz$ and various harmonics, which can all be removed using a notching filter, resulting in minimal loss of information in other portions of the frequency spectrum. The Quality factor $Q$ of the filter controls how narrow the attenuated frequency bands are, and it can be adjusted. It poses a tradeoff between good noise rejection and signal quality, and is designed to be adjustable. Experimentally, we found values of around 5-10 to give the best waveforms for visual inspection. Figure X illustrates the tradeoff between small Q doing ??? and high Q doing ???.
+
+% Taking from scipy's implementation of an IIR Notching filter (`scipy.signal.iircomb`), I also use the structure described in {cite: Sophocles J Orfanidis, "Introduction to Signal Processing", Prentice-Hall, 1996, ch. 11, "Digital Filter Design"} thanks to its adjustable Q factor, numerical stability even at higher orders, and default rejection of the DC component of the signal, which are all very useful for the required signal conditioning. Parametrized by the the sampling frequency $f_s$, the cutoff freqiency $f_0$ (which must be an integer divisor of $f_s$), quality factor $Q$, the IIR filter $H(z)$ is computed as:
+
+% \begin{gather*}
+% N = f_s / \omega_0 \overset{!}{\in} \mathbb{N} \\
+% \omega_0' = \frac{2\pi\omega_0}{f_s}  \\
+% \omega_\Delta = \frac{\omega_0'}{Q}  \\
+% \beta = \tan(N * \omega_\Delta / 4)  \\
+% a = \frac{1 - \beta}{1 + \beta}
+% \end{gather*}
+% \begin{thesisequation}{filter}
+% H(z) = \frac{1}{1 + \beta} \cdot \frac{1 - z^{-N}}{1-az^{-N}}
+% \end{thesisequation}
+
+% \todo{check I transcribed these correctly and actually implement them myself! I only blindly copied these for now}
 
 \newpage
 \subsection{Software part}
 
-\subsubsection{ROS2 agent for non network-capable microcontrollers}
+\subsubsection{LibIIO}
 
-In the case of microcontroller platforms that aren't network capable, including the MAX78000FTHR, the device itself won't have a means of directly connecting to the ROS2 network as a node. As such, it needs to pass along the data to another device that can. Two implementation variants are immediately evident: Using the micro-ROS framework, letting ros logic take over the serial device instead of having it communicate using the IIO protocol, and running a ROS-micro agent on the host
-- Using the ros-control framework and an IIO-ROS2 adapter on the host / carrier board.
+With a working serial IIOD device, we can connect to it with any LibIIO compliant application. For instance, \texttt{iio\_info} provided by the \texttt{libiio-tools} package can display the structure of described IIO context, with the context-device-channel hierarchy, their specific attributes, and channel specifications:
 
-Of which I chose the second because it doesn't require reconfiguring the serial port and allows for simultaneous use of ROS and IIO.
+\begin{verbatim}
+$ iio_info -u serial:/dev/ttyACM0,500000
+iio_info version: 0.25 (git tag:v0.25)
+[... snip ...]
+IIO context has 2 devices:
+  iio:device0: ad4114-exg (buffer capable)
+    16 channels found:
+      voltage0: ch0 (input, index: 0, format: le:u24/32>>0)
+        5 channel-specific attributes found:
+          attr  0: input value: VIN0-VINCOM
+          attr  1: input_available value: [... snip ...]
+          attr  2: raw value: 9246832
+          attr  3: scale value: 0.0029802322387
+          attr  4: offset value: -8388608
+      voltage1: ch1 (input, index: 1, format: le:u24/32>>0)
+      [...snip...]
+      voltage15: ch1 (input, index: 1, format: le:u24/32>>0)
+      [...snip...]
+\end{verbatim}
 
-\todo{implement :)}
+For most of the hardware and firmware development, we used \texttt{iio-oscilloscope} to interact with the device. It allows us to inspect and possibly modify attributes, and perform time-series measurements (figure \ref{fig:oscplot}).
 
-\subsubsection{libiio, pyadi-iio}
+\begin{thesisfigure}{Using iio-oscilloscope to inspect and change attributes (left), and plot measured samples (right)}{oscplot}
+\includegraphics[width=0.48\linewidth]{oscattr.png} \includegraphics[width=0.48\linewidth]{oscplot.png} 
+\end{thesisfigure}
 
-ROS is for robotics, what about just doing some basic signal processing in python without setting it up as a ros node? Libiio has got you covered! Pyadi-iio adds a cherry on top, exposing the entire system as a very simple to initialize and query python object.
+\subsubsection{Python wrapper class}
 
-\todo{implement :)}
+For programatic interaction with the device, we create a Python 3 package defining a device class that exposes functionality for connecting to a device, configuring its channels and starting acquisition, receiving samples, and stopping acquisition.
+
+We extend the \texttt{pyadi-iio} library, which is itself a wrapper around the \texttt{pylibiio} bindings for \texttt{libiio}. While the bindings themselves would suffice, they expose low level libiio details which are unnecessary for this project. An example snippet of how this package can be used is presented:
+
+\begin{lstlisting}[language=Python]
+from ad4114exg_iio import ad4114exg_iio
+
+# Connect to libIIO device based on URI
+uri = 'serial:/dev/ttyACM0,500000'
+dev = ad4114exg_iio(uri)
+
+# Start acquisition of the following inputs
+dev.start(['VIN13-VINCOM', 'VIN2-VIN3', 'VIN3-VIN2'])
+
+# Query sample rate, based on the number of inputs
+fs = dev.sample_rate
+print(fs)
+
+# Receive 100 windows of measured data and print
+for i in range(100):
+    window = dev.rx()
+    print(window)
+\end{lstlisting}
+
+Within \texttt{pyadi-iio}, common ADC and DAC functionality is clustered into the \texttt{tx}, \texttt{rx}, and the merged \texttt{tx\_rx} classes. Additionally, connecting to a LibIIO context is done via the \texttt{context\_manager} class. Taking from other ADC implementations, we define a device class inheriting from \texttt{rx} and \texttt{context\_manager}. 
+
+The most relevant library functions we use are:
+\begin{itemize}
+    \item \texttt{\_set\_iio\_attr} and \texttt{\_get\_iio\_attr} for reading and writing device and channel attributes, such as the selected inputs
+    \item \texttt{rx\_buffer\_size} for controlling the size of received buffers. Larger buffer sizes result in rarer and bulkier transfers (within the limits of the firmware buffer), and smaller buffer sizes result in having transfers happen more often with smaller payloads. We set a size of $16$ samples / transfer for an estimated $1000\Hz / 16 \approx 60\Hz$ buffer transferrate.
+    \item \texttt{rx\_enabled\_channels} selects enabled channels and starts data acquisition upon being written to
+\end{itemize}
+
+Overall, given the amount of logic implemented "behind the scenes" by \texttt{pyadi-iio}, our final device implementation is mostly boilerplate code.
+
+\subsubsection{ROS2 environment}
+
+Before developing the ROS2 node, we first prepare a docker environment so that this software may be runnable on any linux distribution. Based on the OSRF ROS2 iron image, we further install libiio packages, python pip, plotjuggler, and the pyadi-iio python package. The dockerfile is minimal but sufficient:
+
+\begin{lstlisting}
+FROM osrf/ros:iron-desktop-full
+
+RUN apt-get update && \
+    apt-get install -y \
+    libiio-dev libiio-utils \
+    ros-iron-plotjuggler-ros \
+    python3-pip
+RUN python3 -m pip install pyadi-iio
+
+WORKDIR /ros2_ws
+\end{lstlisting}
+
+We build the dockerfile and instantiate a container of it with an interactive terminal (\texttt{-it}), load the ros environment, and then run any wanted ros2 commands:
+
+\begin{verbatim}
+$ cd thesis/software
+$ docker build . -t ros2iio
+$ docker run -it -v .:/ros2_ws -v /tmp/.X11-unix:/tmp/.X11-unix ros2iio
+# source /opt/ros/iron/setup.bash
+# ros2 pkg list
+action_msgs
+action_tutorials_cpp
+action_tutorials_interfaces
+[...snip...]
+\end{verbatim}
+
+In the previous commands, we mounted the project's software workspace (\texttt{-v .:/ros2\_ws}) and the \texttt{/tmp/.X11-unix} file to enable X11 forwarding for ROS2 GUI apps such as plotjuggler.
+
+Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} defining application-specific messages, \texttt{ad4114exg\_publisher} containing the publisher node, and copy the previous iio wrapper to \texttt{ad4114exg\_iio}. The first uses the \texttt{ament-cmake} build system, to allow for message definitions, while the other two use \texttt{ament-python}:
+
+\begin{verbatim}
+# ros2 pkg create --build-type ament_cmake ad4114exg_interfaces
+# ros2 pkg create --build-type ament_python ad4114exg_publisher
+# ros2 pkg create --build-type ament_python ad4114exg_iio
+\end{verbatim}
+
+\newpage
+
+\subsubsection{ROS2 publisher node}
+
+The chosen data format for biopotential measurements is a timestamped float32, defined as the message \texttt{ExgSample.msg}:
+
+\begin{lstlisting}
+std_msgs/Header header
+float32 value
+\end{lstlisting}
+
+While the header field adds a small size overhead, it helps with consistency and interoperability with other ROS2 projects, it being the de facto standard to timestamp messages. For instance, plotjuggler assumes timestamped data to have a \texttt{header.stamp} field.
+
+Because of Docker limitations, we cannot easily and reliably communicate with the device via serial from within the container. Thankfully, libiio's transport layer agnostic nature means we can still make a connection between a ROS2 node and the device by launching iio daemon on the host and connecting to it from the container over TCP.
+
+Building on top of the libiio wrapper class, we develop a ROS2 node that communicates with the iio daemon, buffering incoming data, and regularly publishes it to the ROS2 network. Because these two are implicitly asynchronous and may happen at differing rates, they must be separated into two threads, communicating via a synchronized FIFO.
+
+The Python 3 standard library offers very easy to use functionality for this: the threading library allows for one-liner instantiation of the iio thread, and the queue library implements a thread-safe FIFO, removing the need for hand-implemented thread synchronization mechanisms.
+
+The main thread runs the rclpy loop and publishes all queued up samples at a rate of $1\kHz$:
+
+\begin{lstlisting}[language=Python]
+class AD4114ExgPublisher(Node):
+    #[...snip...]
+    def __init__(self, uri, channels):
+        #[...snip...]
+        self.buffer = Queue()
+        self.timer = self.create_timer(1e-3, self.publish_buffered_samples)
+        #[...snip...]
+
+    def publish_buffered_samples(self):
+        while not self.buffer.empty():
+            (timestamp, channel, value) = self.buffer.get()
+
+            msg = ExgSample()
+            msg.header.stamp = Time(seconds=timestamp).to_msg()
+            msg.value = value
+            self.publisherz[channel].publish(msg)
+\end{lstlisting}
+
+Concurrently, the iio thread connects to the iio daemon, receives samples in blocks, assigns linearly interpolated timestamps, and pushes them to the common buffer:
+
+\begin{lstlisting}[language=Python]
+def receive_thread(self, channels):
+    self.iiodev.start(channels)
+
+    t0 = time()
+    while True:
+        data = self.iiodev.rx()
+        t1 = time()
+        
+        N = data[0].size
+        for i, chan in enumerate(channels):
+            for j, value in enumerate(data[i]):
+                value = (value - 2**23) * 3e-6
+                t = t0 + (t1 - t0) * j / N
+                self.buffer.put((t, i, value))
+
+        t0 = t1
+\end{lstlisting}
 
 \newpage
 \section{Results and validation}
@@ -806,7 +1155,7 @@ Of morbid curiosity, this ECG (figure \ref{fig:rbbb}) displays two R waves, the 
 
 \subsection*{EEG}
 
-While outside of the scope of this project, we attempted EEG measurements, inspired by OpenBCI's architecture which supports all three interchangably. Naive electrode placement and the much weaker nature of EEG signals meant there were no discernable features above the noise floor.
+While outside of the scope of this project, we attempted EEG measurements, inspired by OpenBCI's architecture which supports all three of EMG, ECG and EEG interchangably. Naive electrode placement and the much weaker nature of EEG signals meant there were no discernable features above the noise floor.
 
 \subsection*{LibIIO}
 
@@ -814,11 +1163,10 @@ The data for the previous plots in this section was recorded using iio-oscillosc
 
 \subsection*{ROS2}
 
-The maximum throughput case is when measuring $7-16$ channels with a total data rate of $10309\Hz$ divided between them. We test the ROS2 publisher node and monitor its output using plotjuggler\cite{plotjug} to successfully verify it can record and publish samples at this rate. A screenshot of the measured EMG is shown in figure \ref{fig:plotjuggler}.
+The maximum throughput case is when measuring $7-16$ channels with a total data rate of $10309\Hz$ divided between them. We test the ROS2 publisher node and monitor its output using plotjuggler\cite{plotjug} to successfully verify it can record and publish samples at this rate. A screenshot of an example EMG measurement is shown in figure \ref{fig:plotjuggler}.
 
 \begin{thesisfigure}{ROS2 Plot Juggler displaying measured and published 16 channel EMG at a per-channel data rate of $10309\Hz/16 = 644\Hz$}{plotjuggler}
-%\includegraphics[width=0.8\linewidth]{plotjuggler.png}
-\todo{here come the screenshot}
+\includegraphics[width=0.8\linewidth]{plotjuggler.png}
 \end{thesisfigure}
 
 \newpage
