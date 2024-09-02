@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "AD4114BCPZ")(type "KiCad")(uri "/home/ioan/thesis/hardware/lib/AD4114BCPZ.kicad_sym")(options "")(descr ""))
+  (lib (name "MAX78000FTHR")(type "KiCad")(uri "/home/ioan/thesis/hardware/lib/MAX78000FTHR.kicad_sym")(options "")(descr ""))
+)

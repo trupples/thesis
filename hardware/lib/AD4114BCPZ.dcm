@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP AD4114BCPZ
+D 16-Channel Single ADC Delta-Sigma 31.25ksps 24-bit Serial 40-Pin LFCSP EP
+K
+F https://www.analog.com/media/en/technical-documentation/data-sheets/ad4114.pdf
+$ENDCMP
+#
+#End Doc Library

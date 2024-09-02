@@ -8,19 +8,19 @@
 \supervisor{Șl. Dr. Ing.}{Tassos}{Natsakis}
 
 \thesistitle{Multi-channel biopotential DAQ with ROS2, IIO bindings}
-\thesisproblem{O scurtă  descriere a temei proiectului de diplomă}
+\thesisproblem{Biopotential (ECG, EMG) measurement systems have existed for hundreds of years but current products are by and large closed source, and no previous systems expose their data to the ROS2 or libIIO ecosystems. This thesis develops an open source hardware and software solution for 16 channel 1000Hz ECG and surface EMG measurements, with libIIO and ROS2 bindings on the software side.}
 \thesiscontent{Presentation page, Declaration of authenticity, Summary, Contents, Introduction, Bibliographic research, Analysis design and implementation, Results and validation, Conclusion, Bibliography, Annexes}
 \thesisplace{Technical University of Cluj-Napoca}
 \thesisadvisors{}
-\thesisemissiondate{02.07.2024}
-\thesisdeliverydate{04.07.2024}
+\thesisemissiondate{02.09.2024}
+\thesisdeliverydate{04.09.2024}
 
 \idcard{RZ}{113316}
 \CNP{5011113410095}
 \examsession{2023-2024 September}
-\declarationsigndate{02.07.2024}
+\declarationsigndate{02.09.2024}
 
-\summaryrequirements{A 8/16 channel ECG and EMG DAQ with at least $1000\text{Hz}$ sample rate, and good signal characteristics ($\text{SNR} > 20\text{dB}$, high CMRR, PSRR). Both hardware, firmware and software components designed and implemented. Open source hardware and software.}
+\summaryrequirements{A 8/16 channel ECG and EMG DAQ with at least $1000\text{Hz}$ sample rate, and good signal characteristics ($\text{SNR} > 20\text{dB}$, high CMRR, PSRR). Both hardware, firmware and software components designed and implemented. Software bindings for libIIO and ROS2. Open source hardware and software.}
 \summarysolutions{Hardware: MAX78000 microcontroller, AD4114 ADC, custom designed and built pre-amplifier and Driven Right Leg modules. Firmware implements the libIIO protocol, providing a serial iio context. Software provides lightweight bindings for libIIO, Python, and a ROS2 publisher node.}
 \summaryresults{All signal quality objectives are checked, with room for improvement for the sample rate when using all 16 channels, and software capabilities.}
 \summaryverification{The hardware components were tested individually using an ADALM2000-based test bench. The system as a whole was tested in various measurement scenarios: single/multiple channel EMG/ECG. The software components' throughput was tested to keep up with ADC output.}
