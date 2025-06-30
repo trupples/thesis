@@ -75,19 +75,19 @@
 
 \section{Introduction}
 
-In electrophysiology, two prevalent modes of biopotential measurements are electrocardiography (ECG) and electromyography (EMG), measuring cardiac muscle potentials and skeletal muscle potentials respectively. While methods that use intracellular electrodes exist and are much more precise, using surface electrodes is very common thanks to their non invasive nature, albeit at a loss of spatial specificity due to them being limited to measuring a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions. On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
+In electrophysiology, two prevalent modes of biopotential measurements are electrocardiography (ECG), which measures cardiac muscle potentials, and electromyography (EMG), which measures skeletal muscle potentials. The most precise measurements are acheived using intracellular electrodes, but are an intrusive method requiring surgical precision and sterile technique. Using surface electrodes is a very common alternative thanks to their non invasive nature, albeit with a loss of spatial specificity, as measurements will contain a superposition of nearby potentials. The field of ECG is by and large applied to identifying and diagnosing cardiac abnormalities in clinical and first responder settings, focusing on disturbances of the cardiac rhythm, artery blood flow, or electrolyte availability for diagnosis of heart conditions. On the other hand, Surface EMG (henceforth sEMG) has broader applications, ranging from the clinical, such as diagnosing nerve and muscle damage, to prosthetics, rehabilitation, biofeedback therapy, ergonomics, sports and movement science \cite{Barbero2012}, and it also opens up the possibility of novel Human-Computer Interaction methods.
 
-Robot Operating System (ROS) is an open-source software framework for robotic applications, providing various mechanisms of interacting with hardware, but most importantly providing a flexible communication system ("the plumbing") that allows for real-time message-passing between networked nodes.\cite{ros} In practice, these nodes can be any component of the larger robotic system, be them anything from a discrete piece of hardware to a software component. Nodes communicate by sending messages, which can have varying levels of complexity, from primitives to nested aggregated structures, via "topics" which implement publish/subscribe semantics. In our application, the biopotential DAQ node can expose topics on which it publishes measured samples, for any other node to subscribe to for further signal processing.
+Robot Operating System (ROS) is an open-source software framework for robotic applications, providing various mechanisms of interacting with hardware, but most importantly providing a flexible communication system ("the plumbing") that allows for real-time message-passing between networked nodes.\cite{ros} In practice, these nodes can be any component of the larger robotic system. This includes a wide range of logical devices, from a discrete piece of hardware to software components. Nodes communicate by sending messages, which can have varying levels of complexity, from primitives to nested aggregated structures, via "topics" which implement publish/subscribe semantics. In our application, a ROS 2 node acts as an abstraction for the hardware, by exposing topics on which it publishes measured samples. Other nodes in the system may subscribe to these topics and use the incoming data for further signal processing.
 
-The Linux Industrial I/O (IIO) subsystem was created in 2008 and mainlined in 2012 (\href{https://github.com/torvalds/linux/commit/06458e277eac2b8761b0a04d3c808d57be281a2e}{commit \texttt{06458e2}}) to provide a simple and unified way to interact with devices with ADC or DAC capabilities, broadly ranging from plain ADC/DAC chips to Inertial Measurement Units (Accelerometers, Gyroscopes, Magnetometers), Software Defined Radio, robotic actuators and sensors, and more. Within the Linux kernel, it fills in a gap between the \textit{input} subsystem which can stream user input data and the \textit{hwmon} subsystem used for monitoring and controlling hardware state such as CPU temperature and fan settings, albeit with low refresh rate. The IIO subsystem provides a modular way to define high bandwidth communication with input/output devices directly connected to the host via SPI or I2C and specified as part of the device tree. Despite the subsystem's name, it is not limited to industrial production applications: IIO usage is ubiquitous in today's linux-based devices for integrating features such as accelerometers, gyroscopes or ambient light sensors in a uniform way, besides other hardware abstraction layers.
+The Linux Industrial I/O (IIO) subsystem was created in 2008 and mainlined in 2012 (\href{https://github.com/torvalds/linux/commit/06458e277eac2b8761b0a04d3c808d57be281a2e}{commit \texttt{06458e2}}) to provide a simple and unified way to interact with devices with ADC or DAC capabilities. This category has a broad range including plain ADC/DAC chips, Inertial Measurement Units (Accelerometers, Gyroscopes, Magnetometers), Software Defined Radio, robotic actuators and sensors, and more. Within the Linux kernel, the IIO subsystem fills in a gap between the \textit{input} subsystem which can stream user input data and the \textit{hwmon} subsystem used for monitoring and controlling hardware state such as CPU temperature and fan settings, albeit with low refresh rate. The IIO subsystem provides a modular way to define high bandwidth communication with input/output devices, which are directly connected to the host processor and part of the device tree. This includes devices attached via hardware buses such as SPI, I2C, AXI, etc. Despite the subsystem's name, it is not limited to industrial production applications: IIO usage is ubiquitous in today's linux-based devices for integrating features such as accelerometers, gyroscopes or ambient light sensors in a uniform way, besides other hardware abstraction layers.
 
 \textit{Libiio} is a software library which provices cross-platform functionality for interacting with both local and remote IIO devices, within the same framework. To accomplish this, it implements the IIO Daemon (IIOD) for which it defines the \textit{IIOD protocol}. The current version of the IIOD protocol (v0.1) is based on a set of human readable commands sent via a single data stream of alternating client requests and server responses. This allows the same protocol to be used over a variety of transport layers, officially Serial (most relevant for this application), USB and TCP.
 
-Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
+Although the electrical design of biopotential measurement devices has been studied for hundreds of years, tracing back to Luigi Galvani's work in the 18th century, and there exist a number of current-day commercial, academic, and DIY solutions, only a small part aspire to the ideals of Open Source Hardware and/or Open Source Software (ASPEN\cite{Esposito2018}, openBCI\cite{openbci}, BioAmp-EXG-Pill\cite{pill}, MyoWare EMG\cite{myoware}), and there exist no systems that integrate with ROS 2 or the Linux IIO subsystem, limiting their flexibility in terms of building software that seamlessly interfaces with them.
 
-We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS2 and LibIIO. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS2 and LibIIO, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts. An overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
+We aim to fill this gap and provide an affordable and easily maintainable hardware and software solution for measuring multi-channel biopotential signals and interfacing them with ROS 2 and libiio. Adapting this system to work with other software suites should be made as simple as possible thanks to the versatility of both ROS 2 and libiio, and adapting it to other hardware platforms should also be facilitated by the decoupled nature of the hardware, firmware and software parts. An overview of the information flow, from the biological signals to the software, in figure \ref{fig:flow}.
 
-Further on, we mainly focus on the electrical and firmware signal chain design and implementation, with lightweight but sufficient software wrappers for interacting with the final system through: libiio, a python library, and a ROS2 publisher node, respectively.
+Further on, we mainly focus on the electrical signal chain and firmware design and implementation. We implement a lightweight but sufficient software layer which facilitates interaction with the hardware through libiio, a python library, and a ROS 2 publisher node.
 
 \begin{thesisfigure}{Overview of information flow}{flow}
 \begin{tikzpicture}[
@@ -121,7 +121,7 @@ Further on, we mainly focus on the electrical and firmware signal chain design a
     \node (adc) [component, left=of ele] { ADC };
     \node (amp) [component, below=of $(ele)!0.5!(adc)$] { Amplifier };
 
-    \node [fit={(ele) (amp) (adc) ([yshift=1.5em]ele.north)},system,label={[text=black!40,anchor=north]north:Electronics}] {};
+    \node [fit={(ele) (amp) (adc) ([yshift=1.5em]ele.north)},system,label={[text=black!40,anchor=north]north:Analog electronics}] {};
 
     \path [->, draw, thick]
         (pot) edge (ele)
@@ -145,9 +145,9 @@ Further on, we mainly focus on the electrical and firmware signal chain design a
         (dev) edge (buf)
         (buf) edge (iod);
 
-    \node (lib) [component, below=18mm of iod] { LibIIO };
+    \node (lib) [component, below=18mm of iod] { libiio };
     \node (pyt) [component, right=5mm of lib] { Python bindings };
-    \node (rem) [below=15mm of lib.west,anchor=west] { Remote LibIIO instance };
+    \node (rem) [below=15mm of lib.west,anchor=west] { Remote libiio instance };
     \node (app) [right=5mm of rem] { Local Python app };
 
     \path [<->, draw, thick]
@@ -155,8 +155,8 @@ Further on, we mainly focus on the electrical and firmware signal chain design a
         (lib) edge (pyt.west)
         (lib) edge (rem);
 
-    \node (ros) [component, right=5mm of pyt] { ROS2 publisher node };
-    \node (net) [right=of ros] { ROS2 network };
+    \node (ros) [component, right=5mm of pyt] { ROS 2 publisher node };
+    \node (net) [right=of ros] { ROS 2 network };
 
     \path [<->, draw, thick]
         (pyt) edge (ros)
@@ -558,21 +558,21 @@ R_E \cdot (i_E - i_{out}) = V_{out} = V_{in} - V_{BE}
 
 The transistor's amplification allows the output port to source up to $i_{out} \le \beta \cdot i_B$, and the circuit can sink up to $i_{out} \ge -V_{out}/R_E$, in which case the transistor is at the limit between off and conducting.
 
-\subsection{LibIIO internals}
+\subsection{Libiio internals}
 
-In essence, LibIIO\cite{libiiointernals} facilitates communication with iio-like systems. The representation of such a system is the \textit{iio context}. All iio contexts have the same structure, but they can vary in their backend, which specifies the communication model, some of the options being: "local" for linux iio devices defined through the device tree, "serial" and "usb" for wired devices, "ip" for networked communication with an iio daemon, etc. Contexts contain a list of \textit{devices}, each of which containing a list of \textit{channels}. Both contexts, devices and channels can have a number of \textit{attributes} for configuration, which are string key - string value pairs. Channels are meant for sending or receiving sampled data, whose storage and transfer is done via \textit{buffers}. Each channel buffer can specify its direction (input/output/both) and data format (signedness, bits per sample, bit layout).
+In essence, libiio\cite{libiiointernals} facilitates communication with iio-like systems from software. A system containing multiple IIO devices is the \textit{iio context}. All iio contexts provide the same functionality and structure, but they may vary in the communication model, abstracted through their \textit{backend}. The main backends are: \texttt{local} for "true" Linux IIO devices defined through the device tree, \texttt{serial} for libiio devices that communicate via serial port, \texttt{usb} for wired devices with a libiio-specific USB stack, "ip" for networked communication with a libiio daemon. Contexts contain a list of \textit{devices}, each of which containing a list of \textit{channels}. Both contexts, devices and channels can have a number of \textit{attributes} for configuration, which are string key - string value pairs. Channels are meant for sending or receiving sampled data, whose storage and transfer is done via \textit{buffers}. Each channel buffer can specify its direction (input/output/both) and data format (signedness, bits per sample, bit layout).
 
 The two main interactions with a libiio device are reading/writing attributes and reading/writing sample data. Attributes are interacted with in single transactions. Sample data transfers are more involved, requiring allocation of buffers, and exchanging their contents in chunks.
 
-All libiio communication, regardless of underlying transport layer, is done via the IIOD protocol, which is a human readable command-reply protocol. It defines 14 commands: \texttt{HELP}, \texttt{EXIT}, \texttt{PRINT}, \texttt{VERSION}, \texttt{TIMEOUT}, \texttt{OPEN}, \texttt{CLOSE}, \texttt{READ}, \texttt{WRITE}, \texttt{READBUF}, \texttt{WRITEBUF}, \texttt{GETTRIG}, \texttt{SETTRIG}, \texttt{SET}, of which the following are of especial importance to our project:
+All libiio communication, regardless of underlying transport layer, is done via the IIOD protocol, which is a human readable command-reply protocol. It defines 14 commands: \texttt{HELP}, \texttt{EXIT}, \texttt{PRINT}, \texttt{VERSION}, \texttt{TIMEOUT}, \texttt{OPEN}, \texttt{CLOSE}, \texttt{READ}, \texttt{WRITE}, \texttt{READBUF}, \texttt{WRITEBUF}, \texttt{GETTRIG}, \texttt{SETTRIG}, \texttt{SET}, of which the following are of especial importance to our device:
 \begin{itemize}
-    \item \texttt{OPEN <device> <samples\_count> <mask>} - starts acquisition on the specified device in buffers of specified length, with the enabled channels corresponding to the 1 bits in the mask
+	\item \texttt{OPEN <device> <samples\_count> <mask>} - starts acquisition on the specified device, using \texttt{samples\_count} as the buffer size, and \texttt{mask} as a bitmap of which of the available channels to use
     \item \texttt{CLOSE <device>} - stops acquisition on the specified device
     \item \texttt{READBUF <device> <bytes\_count>} - reads buffered data from a device doing acquisition
     \item \texttt{READ}/\texttt{WRITE} - read and write device/channel attributes
 \end{itemize}
 
-A useful construct is the iio daemon, which exposes an iio context on a given backend. For instance, this project's firmware will expose the iio context on serial, which then can be plugged into another iio daemon which can expose it to the network, facilitating remote access of the device.
+Libiio daemons are software which allows communicating with a libiio context between otherwise incompatible backends. This project uses two libiio daemons: the first one resides in firmware and handles communication between a "native" device and a libiio serial transport, and the second resides in software and further exposes the serial transport to the network, for easier low-privilege use and remote access of the device.
 
 \newpage
 \section{Analysis, design and implementation}
@@ -587,7 +587,7 @@ The project MUST:
     \item Measure with \textbf{at least $600\Hz$ sample rate} to unambiguously capture EMG components up to $300\Hz$
     \item Have \textbf{high CMRR, PSRR}, to the point where powerline noise is either not present or can be easily filtered out digitally
     \item Have \textbf{high SNR} ($>40\dB$ for EMG; $>20\dB$ for ECG)
-    \item Provide software support for interfacing with \textbf{ROS2 and LibIIO}
+    \item Provide software support for interfacing with \textbf{ROS 2 and libiio}
 \end{itemize}
 
 The project SHOULD:
@@ -606,9 +606,9 @@ We split the project into 3 main domains: mixed-signal, embedded firmware, and s
 
 The \textbf{mixed-signal domain} consists of the electrodes, wires, amplification stages, and ADC. It is the most sensitive part of the signal chain, requiring care in its design and construction to bring as little noise as possible into the measured signals.
 
-The \textbf{embedded firmware domain} represents the code running on a microcontroller that communicates with both the host computer and the ADC. It will be implemented as a serial LibIIO device, allowing it to be configured from the host computer, for it to later record ADC data, buffer it, and send it in chunks.
+The \textbf{embedded firmware domain} represents the code running on a microcontroller that communicates with both the host computer and the ADC. It will be implemented as a serial libiio device, allowing it to be configured from the host computer, for it to later record ADC data, buffer it, and send it in chunks.
 
-The \textbf{software domain} will be a minimal layer on top of LibIIO to provide easy access to the device via Python 3 bindings and a ROS2 node.
+The \textbf{software domain} will be a minimal layer on top of libiio to provide easy access to the device via Python 3 bindings and a ROS 2 node.
 
 The overall assembled setup consisting of a MAX78000FTHR microcontroller, EVAL-AD4114-SDZ ADC assembly, Right Leg Drive and Amplifier boards, is presented in figure \ref{fig:moneyshot}.
 
@@ -756,7 +756,7 @@ The circuit schematic for the Driven Right Leg circuit and a photo of its implem
 
 \subsubsection{Microcontroller}
 
-For microcontroller selection, the main performance considerations are on the one hand the ability to communicate via SPI fast enough to comply with the desired sample rate, and on the other hand for it to have a fast enough clock rate and memory for the IIO Daemon which will comprise most of the final application. For further work, networking capabilities would be a nice-to-have to be able to run a standalone ROS2 node. A plethora of well known boards match these criteria, among which the very popular Espressif ESP8266 and ESP32, or the Raspberry Pi RP2040 and RP2350 would be sufficient and good alternative choices thanks to their excellent community support. The popular, yet more and more obsolete ATMEGA328p of Arduino fame isn't fast enough for both recording and further transferring all 16 channels, especially not through unmodifier IIOD / ros-micro implementations.
+For microcontroller selection, the main performance considerations are on the one hand the ability to communicate via SPI fast enough to comply with the desired sample rate, and on the other hand for it to have a fast enough clock rate and memory for the IIO Daemon which will comprise most of the final application. For further work, networking capabilities would be a nice-to-have to be able to run a standalone ROS 2 node. A plethora of well known boards match these criteria, among which the very popular Espressif ESP8266 and ESP32, or the Raspberry Pi RP2040 and RP2350 would be sufficient and good alternative choices thanks to their excellent community support. The popular, yet more and more obsolete ATMEGA328p of Arduino fame isn't fast enough for both recording and further transferring all 16 channels, especially not through unmodifier IIOD / ros-micro implementations.
 
 We chose the Analog Devices \textbf{MAX78000FTHR microcontroller platform} thanks to its powerful specs which would also allow for some degree of digital signal processing on the board itself. We will use the MAX78000's dedicated SPI bus which is exposed on the feather board. On board, it also has a MAX32625 acting like a USB interface, which also exposes DAPLINK functionality, allowing for easy firmware uploads (by just copying files onto a virtual mounted filesystem) and debugging (via CMSIS-DAP by using the VS Code environment with the Cortex Debug extension).
 
@@ -826,9 +826,9 @@ The separation of common and platform specific parameters is relevant especially
 
 Fortunately, the no-OS ecosystem already provides drivers for both the MAX78000 platform as well as the AD4114 as part of the AD717X family of ADCs\cite{ad717x}. This means that we do not have to implement the SPI digital communication protocol ourselves, as the most common operations: initialization, selecting channels and inputs, assigning measurement setups, reading data, are already implemented.
 
-\subsubsection{LibIIO integration}
+\subsubsection{libiio integration}
 
-It is quite common for no-OS projects to provide IIO functionality, and for this reason no-OS has a dedicated LibIIO protocol implementation. This provides a convenient way of describing LibIIO contexts, with customizable callbacks for all read/write operations with both actual sample data and attributes. Additionally, it implements an internal event loop which abstracts away asynchronous communication with both the host computer and the connected peripherals, which is a major concern in a system where concurrent real-time communication takes place.
+It is quite common for no-OS projects to provide IIO functionality, and for this reason no-OS has a dedicated libiio protocol implementation. This provides a convenient way of describing libiio contexts, with customizable callbacks for all read/write operations with both actual sample data and attributes. Additionally, it implements an internal event loop which abstracts away asynchronous communication with both the host computer and the connected peripherals, which is a major concern in a system where concurrent real-time communication takes place.
 
 The first step is defining the structure of the IIO context is, as it solidifies a mapping between the device-specific functionality on the hardware side and the application-specific functionality on the software side. There is a spectrum of choice between exposing attributes for very low-level details (such as individual flags in registers), which offloads most application logic to the software side, and exposing more high-level attributes which are translated into register values by the firmware. Because we are not defining a general-purpose ADC device, we will restrict ourselves to only one configurable attribute per channel, namely the desired input to measure, opaquely choosing the best suited sample rates, filter settings, and setup assignment based on table \ref{tab:configs}. Read-only attributes will expose the computed sampling frequency for the device, as well as calibration values (scale and offset) and a list of available input pairs for each channel.
 
@@ -945,9 +945,9 @@ if(channel == iio_dev->last_enabled_channel)
 \newpage
 \subsection{Software part}
 
-\subsubsection{LibIIO}
+\subsubsection{libiio}
 
-With a working serial IIOD device developed in the previous section, we can connect to it with any LibIIO compliant application without requiring further development.
+With a working serial IIOD device developed in the previous section, we can connect to it with any libiio compliant application without requiring further development.
 
 For instance, \texttt{iio\_info} provided by the \texttt{libiio-tools} package can display the structure of described IIO context, with the context-device-channel hierarchy, their specific attributes, and channel specifications:
 
@@ -1003,7 +1003,7 @@ for i in range(100):
     print(window)
 \end{lstlisting}
 
-Within \texttt{pyadi-iio}, common ADC and DAC functionality such as channel selection, buffer creation, buffer transfers, are clustered into the \texttt{tx}, \texttt{rx}, and \texttt{tx\_rx} classes, which most devices inherit from. Additionally, connecting to a LibIIO context is done via the \texttt{context\_manager} class. The most relevant library functions we use are:
+Within \texttt{pyadi-iio}, common ADC and DAC functionality such as channel selection, buffer creation, buffer transfers, are clustered into the \texttt{tx}, \texttt{rx}, and \texttt{tx\_rx} classes, which most devices inherit from. Additionally, connecting to a libiio context is done via the \texttt{context\_manager} class. The most relevant library functions we use are:
 \begin{itemize}
     \item \texttt{\_set\_iio\_attr} and \texttt{\_get\_iio\_attr} for reading and writing device and channel attributes, such as the selected inputs
     \item \texttt{rx\_buffer\_size} for controlling the size of received buffers. Larger buffer sizes result in rarer and bulkier transfers (within the limits of the firmware buffer), and smaller buffer sizes result in having transfers happen more often with smaller payloads. We set a size of $16$ samples / transfer for an estimated $1000\Hz / 16 \approx 60\Hz$ buffer transferrate.
@@ -1045,11 +1045,11 @@ def start(self, inputs):
 
 Overall, given the amount of logic implemented "behind the scenes" by \texttt{pyadi-iio}, creating this functional wrapper required minimal coding, with more than half of the file being boilerplate.
 
-\subsubsection{ROS2 environment}
+\subsubsection{ROS 2 environment}
 
-While not being a distribution in and of itself, ROS and ROS2 are notorious for low interoperability distributions other than the officially supported ones. When working with ROS2, it is most practical to use a virtual machine or container to isolate the ros2 environment from the host linux distribution, as package version mismatches make it very difficult to run otherwise.
+While not being a distribution in and of itself, ROS and ROS 2 are notorious for low interoperability distributions other than the officially supported ones. When working with ROS 2, it is most practical to use a virtual machine or container to isolate the ros2 environment from the host linux distribution, as package version mismatches make it very difficult to run otherwise.
 
-For this project, we prepare a docker environment so that this software may be runnable on any linux distribution. Based on the OSRF ROS2 iron image, we further install libiio, plotjuggler, and the pyadi-iio python package. The following dockerfile is minimal but sufficient:
+For this project, we prepare a docker environment so that this software may be runnable on any linux distribution. Based on the OSRF ROS 2 iron image, we further install libiio, plotjuggler, and the pyadi-iio python package. The following dockerfile is minimal but sufficient:
 
 \begin{lstlisting}
 FROM osrf/ros:iron-desktop-full
@@ -1078,9 +1078,9 @@ action_tutorials_interfaces
 [...snip...]
 \end{verbatim}
 
-In the previous commands, we mounted the project's software workspace (\texttt{-v .:/ros2\_ws}) and the \texttt{/tmp/.X11-unix} file to enable X11 forwarding for ROS2 GUI apps such as plotjuggler.
+In the previous commands, we mounted the project's software workspace (\texttt{-v .:/ros2\_ws}) and the \texttt{/tmp/.X11-unix} file to enable X11 forwarding for ROS 2 GUI apps such as plotjuggler.
 
-Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} defining application-specific messages, \texttt{ad4114exg\_publisher} containing the publisher node, and copy the previous \texttt{pyadi-iio} wrapper to \texttt{ad4114exg\_iio}. The first package uses the \texttt{ament-cmake} build system, to allow for message definitions, while the other two use \texttt{ament-python}:
+Within the ROS 2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} defining application-specific messages, \texttt{ad4114exg\_publisher} containing the publisher node, and copy the previous \texttt{pyadi-iio} wrapper to \texttt{ad4114exg\_iio}. The first package uses the \texttt{ament-cmake} build system, to allow for message definitions, while the other two use \texttt{ament-python}:
 
 \begin{verbatim}
 # ros2 pkg create --build-type ament_cmake ad4114exg_interfaces
@@ -1089,7 +1089,7 @@ Within the ROS2 workspace, we create 3 packages: \texttt{ad4114exg\_interfaces} 
 \end{verbatim}
 
 \newpage
-\subsubsection{ROS2 implementation}
+\subsubsection{ROS 2 implementation}
 
 The chosen data format for biopotential measurements is a timestamped float32, defined as the message \texttt{ExgSample.msg}:
 
@@ -1098,11 +1098,11 @@ std_msgs/Header header
 float32 value
 \end{lstlisting}
 
-While the header field adds a small size overhead due to the unused frame id, it helps with consistency and interoperability with other ROS2 projects, it being the de facto standard to timestamp messages. For instance, plotjuggler assumes timestamped data to have a \texttt{header.stamp} field.
+While the header field adds a small size overhead due to the unused frame id, it helps with consistency and interoperability with other ROS 2 projects, it being the de facto standard to timestamp messages. For instance, plotjuggler assumes timestamped data to have a \texttt{header.stamp} field.
 
-Communication with the serial device is made difficult by the fact that the ros2 iron distribution's package library refers to an older version of libiio which doesn't support the serial backend. Thankfully, libiio's transport-layer-agnostic nature means we can still make a connection between the ROS2 node and the device by launching iio daemon on the host to act as a middleman between the serial device and the ROS2 container, communicating over TCP as a networked iio context.
+Communication with the serial device is made difficult by the fact that the ros2 iron distribution's package library refers to an older version of libiio which doesn't support the serial backend. Thankfully, libiio's transport-layer-agnostic nature means we can still make a connection between the ROS 2 node and the device by launching iio daemon on the host to act as a middleman between the serial device and the ROS 2 container, communicating over TCP as a networked iio context.
 
-Building on top of the libiio wrapper class, we develop a ROS2 node that communicates with the iio daemon, buffering incoming data, and regularly publishes it to the ROS2 network. Because these two are implicitly asynchronous and may happen at differing rates, they must be separated into two threads, communicating via a synchronized FIFO.
+Building on top of the libiio wrapper class, we develop a ROS 2 node that communicates with the iio daemon, buffering incoming data, and regularly publishes it to the ROS 2 network. Because these two are implicitly asynchronous and may happen at differing rates, they must be separated into two threads, communicating via a synchronized FIFO.
 
 The Python 3 standard library offers very easy to use functionality for this: the threading library allows for one-liner instantiation of the iio thread, and the queue library implements a thread-safe FIFO, removing the need for hand-implemented thread synchronization mechanisms.
 
@@ -1244,15 +1244,15 @@ Of morbid curiosity, this ECG (figure \ref{fig:rbbb}) displays two R waves, the 
 
 While outside of the scope of this project, we attempted EEG measurements, inspired by OpenBCI's architecture which supports all three of EMG, ECG and EEG interchangably. Naive electrode placement and the much weaker nature of EEG signals meant there were no discernable features above the noise floor.
 
-\subsection*{LibIIO}
+\subsection*{libiio}
 
 The data for the previous plots in this section was recorded using iio-oscilloscope\cite{osc} which is based on libiio, and later processed and plotted in MATLAB. All relevant features function: selecting channels, assigning inputs to channels, querying DAQ parameters (sample rate, per-channel scale and offset); thus valing the libiio component of the project.
 
-\subsection*{ROS2}
+\subsection*{ROS 2}
 
-The maximum throughput case is when measuring $7-16$ channels with a total data rate of $10309\Hz$ divided between them. We test the ROS2 publisher node and monitor its output using plotjuggler\cite{plotjug} to successfully verify it can record and publish samples at this rate. A screenshot of an example EMG measurement is shown in figure \ref{fig:plotjuggler}.
+The maximum throughput case is when measuring $7-16$ channels with a total data rate of $10309\Hz$ divided between them. We test the ROS 2 publisher node and monitor its output using plotjuggler\cite{plotjug} to successfully verify it can record and publish samples at this rate. A screenshot of an example EMG measurement is shown in figure \ref{fig:plotjuggler}.
 
-\begin{thesisfigure}{ROS2 Plot Juggler displaying measured and published 16 channel EMG at a per-channel data rate of $10309\Hz/16 = 644\Hz$}{plotjuggler}
+\begin{thesisfigure}{ROS 2 Plot Juggler displaying measured and published 16 channel EMG at a per-channel data rate of $10309\Hz/16 = 644\Hz$}{plotjuggler}
 \includegraphics[width=0.8\linewidth]{plotjuggler.png}
 \end{thesisfigure}
 
@@ -1265,7 +1265,7 @@ The hardware consists of a MAX78000FTHR microcontroller board functioning as a s
 
 The firmware runs the no-OS IIO daemon with a custom device definition tailored to the use-case of biopotential measurements, allowing for the configuration of desired input channels and making opinionated choices for the ADC configuration in order to maximize signal quality.
 
-On the software side, the system can be interacted with directly via libiio, python bindings, and a ROS2 publisher node broadcasting live sample data. We did not focus on automatic interpretation of the signals, but the modular nature of this project allows for easy interconnection with software DSP projects doing that.
+On the software side, the system can be interacted with directly via libiio, python bindings, and a ROS 2 publisher node broadcasting live sample data. We did not focus on automatic interpretation of the signals, but the modular nature of this project allows for easy interconnection with software DSP projects doing that.
 
 Evaluating the established objectives, we check all MUSTs, and 3/5 SHOULDs. This implementation falls short on the available data rate when activating more than 10 channels, with a max ODR of $10309\Hz$ divided among all channels, as well as on the precision requirement, being limited to $3\uV$ resolution without the preamplifier board, but having sub-microvolt precision with it.
 
