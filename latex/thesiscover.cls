@@ -171,7 +171,7 @@ Scientific supervisor: \textbf{\@sutitle \space \@sufname \space \uppercase{\@su
 \end{minipage}
 
 \begin{center}
-\footerstyle{2024}
+\footerstyle{2025}
 \end{center}
 
 \newpage
